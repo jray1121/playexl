@@ -53,6 +53,9 @@ export default function SheetMusicViewer({
   const pageDimRef = useRef<{ height: number }[]>([])
   const lastFiredTrigger = useRef<number>(-1)
   const scrollAnimRef = useRef<number>(0)
+  // Always-current ref so effects can read currentTime without stale closures
+  const currentTimeRef = useRef(currentTime)
+  currentTimeRef.current = currentTime
 
   useEffect(() => { pageDimRef.current = pageDimensions }, [pageDimensions])
 
@@ -197,23 +200,34 @@ export default function SheetMusicViewer({
     easeTo(scrollTarget)
   }, [currentTime, scrollTriggers])
 
-  // Reset trigger memory when seeking back
+  // Reset trigger memory when currentTime goes back near zero (song restart / rewind)
   useEffect(() => {
     if (currentTime < 1) lastFiredTrigger.current = -1
   }, [currentTime])
 
   // Scroll to measure when user jumps via transport
   useEffect(() => {
-    if (!seekMeasure || !measurePositions?.length) return
+    if (seekMeasure == null) return
     const container = containerRef.current
     const dims = pageDimRef.current
-    if (!container || !dims.length) return
-    const targetY = getMeasureY(seekMeasure, dims)
-    if (targetY === null) return
-    const scrollTarget = Math.max(0, targetY - container.clientHeight * SCROLL_TARGET_FRAC)
+    if (!container) return
+
+    const targetY = dims.length ? getMeasureY(seekMeasure, dims) : null
+    // Fall back to scrollTop 0 if we can't find the measure (e.g. measure 1 not mapped)
+    const scrollTarget = targetY != null
+      ? Math.max(0, targetY - container.clientHeight * SCROLL_TARGET_FRAC)
+      : 0
     easeTo(scrollTarget)
-    lastFiredTrigger.current = -1  // reset so scroll triggers re-fire from new position
-  }, [seekMeasure])
+
+    // Set lastFiredTrigger to the most recently passed trigger AT the seek position.
+    // This prevents the currentTime effect from immediately re-firing triggers
+    // that are already "behind" us after the seek.
+    const t = currentTimeRef.current
+    const lastPassed = scrollTriggers
+      .filter((trig) => t >= trig.triggerTimestamp)
+      .sort((a, b) => b.triggerTimestamp - a.triggerTimestamp)[0]
+    lastFiredTrigger.current = lastPassed?.triggerTimestamp ?? -1
+  }, [seekMeasure, scrollTriggers])
 
   useEffect(() => () => cancelAnimationFrame(scrollAnimRef.current), [])
 

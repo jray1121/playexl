@@ -285,19 +285,20 @@ export default function Player({ song }: Props) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-56px)]">
-      {/* Song info banner — full width, truly centered */}
-      <div className="w-full px-6 py-4 border-b border-zinc-800 bg-zinc-900/70 shrink-0 text-center">
-        <h1 className="font-bold text-2xl text-zinc-100 tracking-tight">{song.title}</h1>
-        <p className="text-zinc-300 text-sm mt-1">
-          {song.is_acappella
-            ? `for a cappella ${song.voicing} Voices`
-            : `for ${song.voicing} Voices with Piano Accompaniment`}
-        </p>
-        <div className="flex items-center justify-center gap-3 mt-1 flex-wrap">
-          {buildCredits({ composer: song.composer, lyricist: song.lyricist, arranger: song.arranger }).map((line) => (
-            <span key={line} className="text-zinc-400 text-sm">{line}</span>
-          ))}
+      {/* Song info banner — two compact rows */}
+      <div className="w-full px-6 pt-2 pb-1.5 border-b border-zinc-800 bg-zinc-900/70 shrink-0 text-center">
+        <div className="flex items-center justify-center gap-2.5 flex-wrap leading-tight">
+          <h1 className="font-bold text-xl text-zinc-100 tracking-tight leading-tight">{song.title}</h1>
+          <span className="text-zinc-600 text-sm">·</span>
+          <span className="text-zinc-300 text-sm">
+            {song.is_acappella
+              ? `a cappella ${song.voicing}`
+              : `${song.voicing} with Piano`}
+          </span>
         </div>
+        <p className="text-zinc-500 text-xs mt-0.5 leading-tight">
+          {buildCredits({ composer: song.composer, lyricist: song.lyricist, arranger: song.arranger }).join("  ·  ")}
+        </p>
       </div>
 
 
@@ -331,7 +332,7 @@ export default function Player({ song }: Props) {
 
         <div className="w-72 border-l border-zinc-800 bg-zinc-900 overflow-y-auto flex flex-col shrink-0">
           {/* Mixer header + master volume */}
-          <div className="px-4 pt-4 pb-3 border-b border-zinc-800 space-y-3">
+          <div className="pl-4 pr-5 pt-4 pb-3 border-b border-zinc-800 space-y-3">
             <p className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Mixer</p>
             <div className="space-y-1">
               <div className="flex items-center justify-between">

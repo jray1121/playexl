@@ -1,9 +1,9 @@
 "use client"
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import "react-pdf/dist/Page/AnnotationLayer.css"
 import "react-pdf/dist/Page/TextLayer.css"
-import { Undo2, Save, Loader2, CheckCircle } from "lucide-react"
+import { Undo2, Save, Loader2, CheckCircle, X, GripHorizontal } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import type { MeasurePosition } from "@/types"
@@ -14,7 +14,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString()
 
 const PAGE_WIDTH = 900
-const PAGE_GAP = 24  // px gap between pages
+const PAGE_GAP = 24
 
 interface Props {
   songId: string
@@ -42,73 +42,123 @@ export default function MeasureMapper({
   )
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [highlightedMeasure, setHighlightedMeasure] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Record page height as each page renders
-  function onPageLoad(pageIndex: number, width: number, height: number) {
-    setPageDimensions((prev) => {
-      const next = [...prev]
-      next[pageIndex] = { width, height }
-      return next
-    })
-  }
+  // Drag state (all in refs to avoid re-renders during drag)
+  const draggingRef = useRef<{ measure: number; pageIndex: number } | null>(null)
+  const didDragRef = useRef(false)
 
-  // Calculate Y offset of a page within the scroll container
   function pageTopOffset(pageIndex: number): number {
-    let offset = 0
+    // Pages are centered in the scroll container — find the page wrapper's top
+    // We stack them with PAGE_GAP + py-6 (24px) top padding
+    let offset = 24 // py-6
     for (let i = 0; i < pageIndex; i++) {
       offset += (pageDimensions[i]?.height ?? 0) + PAGE_GAP
     }
     return offset
   }
 
-  // Handle click on the PDF container
-  function handleClick(e: React.MouseEvent<HTMLDivElement>) {
+  function getYPercentFromMouseY(mouseYInContainer: number, pageIndex: number): number {
+    const pageTop = pageTopOffset(pageIndex)
+    const pageH = pageDimensions[pageIndex]?.height ?? 1
+    const yWithinPage = mouseYInContainer - pageTop
+    return Math.max(0, Math.min(1, yWithinPage / pageH))
+  }
+
+  // ── Place new marker on click ─────────────────────────────────────────────
+
+  function handleContainerClick(e: React.MouseEvent<HTMLDivElement>) {
+    // Don't place if user was dragging
+    if (didDragRef.current) { didDragRef.current = false; return }
+
     const container = containerRef.current
     if (!container || numPages === 0) return
 
     const rect = container.getBoundingClientRect()
     const scrollTop = container.scrollTop
     const clickY = e.clientY - rect.top + scrollTop
-    const clickX = e.clientX - rect.left
 
     // Find which page was clicked
-    let targetPage = 0
-    let yWithinPage = 0
-    let runningY = 0
-
+    let targetPageIndex = -1
+    let runningY = 24 // py-6 top padding
     for (let i = 0; i < numPages; i++) {
       const h = pageDimensions[i]?.height ?? 0
-      const pageStart = runningY
-      const pageEnd = runningY + h
-
-      if (clickY >= pageStart && clickY <= pageEnd) {
-        targetPage = i + 1  // 1-indexed
-        yWithinPage = clickY - pageStart
+      if (clickY >= runningY && clickY <= runningY + h) {
+        targetPageIndex = i
         break
       }
       runningY += h + PAGE_GAP
     }
+    if (targetPageIndex === -1) return
 
-    if (targetPage === 0) return
-
-    const pageH = pageDimensions[targetPage - 1]?.height ?? 1
+    const pageH = pageDimensions[targetPageIndex]?.height ?? 1
+    const yWithinPage = clickY - pageTopOffset(targetPageIndex)
     const yPercent = Math.max(0, Math.min(1, yWithinPage / pageH))
 
     const newPos: MeasurePosition = {
       measure: nextMeasure,
-      page: targetPage,
+      page: targetPageIndex + 1,
       yPercent,
     }
 
     setPositions((prev) => {
-      // Replace if measure already exists
       const filtered = prev.filter((p) => p.measure !== nextMeasure)
       return [...filtered, newPos].sort((a, b) => a.measure - b.measure)
     })
     setNextMeasure((m) => m + 1)
     setSaved(false)
   }
+
+  // ── Drag to reposition ────────────────────────────────────────────────────
+
+  function handlePinMouseDown(e: React.MouseEvent, measure: number, pageIndex: number) {
+    e.stopPropagation()
+    e.preventDefault()
+    draggingRef.current = { measure, pageIndex }
+    didDragRef.current = false
+  }
+
+  useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!draggingRef.current) return
+      didDragRef.current = true
+
+      const container = containerRef.current
+      if (!container) return
+
+      const { measure, pageIndex } = draggingRef.current
+      const rect = container.getBoundingClientRect()
+      const scrollTop = container.scrollTop
+      const mouseY = e.clientY - rect.top + scrollTop
+      const yPercent = getYPercentFromMouseY(mouseY, pageIndex)
+
+      setPositions((prev) =>
+        prev.map((p) => (p.measure === measure ? { ...p, yPercent } : p))
+      )
+      setSaved(false)
+    }
+
+    function onMouseUp() {
+      draggingRef.current = null
+    }
+
+    window.addEventListener("mousemove", onMouseMove)
+    window.addEventListener("mouseup", onMouseUp)
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove)
+      window.removeEventListener("mouseup", onMouseUp)
+    }
+  }, [pageDimensions])
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  function deletePosition(measure: number) {
+    setPositions((prev) => prev.filter((p) => p.measure !== measure))
+    setSaved(false)
+  }
+
+  // ── Undo ─────────────────────────────────────────────────────────────────
 
   function undoLast() {
     if (positions.length === 0) return
@@ -119,9 +169,18 @@ export default function MeasureMapper({
     setSaved(false)
   }
 
-  function jumpToMeasure(measure: number) {
-    setNextMeasure(measure)
+  // ── Scroll to position ────────────────────────────────────────────────────
+
+  function scrollToPosition(pos: MeasurePosition) {
+    const container = containerRef.current
+    if (!container) return
+    const top = pageTopOffset(pos.page - 1) + pos.yPercent * (pageDimensions[pos.page - 1]?.height ?? 0)
+    container.scrollTo({ top: top - 200, behavior: "smooth" })
+    setHighlightedMeasure(pos.measure)
+    setTimeout(() => setHighlightedMeasure(null), 1500)
   }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
 
   async function save() {
     setSaving(true)
@@ -134,24 +193,16 @@ export default function MeasureMapper({
     setSaved(true)
   }
 
-  // Scroll the PDF to show where a mapped measure is
-  function scrollToPosition(pos: MeasurePosition) {
-    const container = containerRef.current
-    if (!container) return
-    const top = pageTopOffset(pos.page - 1) + pos.yPercent * (pageDimensions[pos.page - 1]?.height ?? 0)
-    container.scrollTo({ top: top - 200, behavior: "smooth" })
-  }
-
-  const mappedMeasures = new Set(positions.map((p) => p.measure))
+  const pageDimsReady = pageDimensions.filter(Boolean).length === numPages && numPages > 0
 
   return (
-    <div className="flex h-[calc(100vh-64px)] gap-0">
+    <div className="flex h-[calc(100vh-64px)] gap-0" style={{ cursor: draggingRef.current ? "grabbing" : undefined }}>
 
-      {/* ── PDF panel ─────────────────────────────────────────────────────── */}
+      {/* ── PDF panel ───────────────────────────────────────────────────── */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto bg-zinc-950 cursor-crosshair relative"
-        onClick={handleClick}
+        className="flex-1 overflow-y-auto bg-zinc-950 cursor-crosshair relative select-none"
+        onClick={handleContainerClick}
       >
         <Document
           file={pdfUrl}
@@ -170,38 +221,81 @@ export default function MeasureMapper({
                   width={PAGE_WIDTH}
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
-                  onRenderSuccess={(page) => onPageLoad(i, page.width, page.height)}
+                  onRenderSuccess={(page) => {
+                    setPageDimensions((prev) => {
+                      const next = [...prev]
+                      next[i] = { width: page.width, height: page.height }
+                      return next
+                    })
+                  }}
                   className="shadow-2xl"
                 />
-                {/* Pins for mapped measures on this page */}
-                {positions
+
+                {/* Pins for this page */}
+                {pageDimsReady && positions
                   .filter((p) => p.page === i + 1)
-                  .map((pos) => (
-                    <div
-                      key={pos.measure}
-                      className="absolute left-0 flex items-center gap-1 pointer-events-none"
-                      style={{ top: `${pos.yPercent * 100}%`, transform: "translateY(-50%)" }}
-                    >
-                      <div className="bg-amber-400 text-zinc-900 text-xs font-bold px-1.5 py-0.5 rounded shadow-lg">
-                        {pos.measure}
+                  .map((pos) => {
+                    const isHighlighted = highlightedMeasure === pos.measure
+                    const isDraggingThis = draggingRef.current?.measure === pos.measure
+                    return (
+                      <div
+                        key={pos.measure}
+                        className="absolute left-0 right-0 flex items-center"
+                        style={{
+                          top: `${pos.yPercent * 100}%`,
+                          transform: "translateY(-50%)",
+                          zIndex: isDraggingThis ? 50 : 10,
+                        }}
+                      >
+                        {/* Horizontal rule */}
+                        <div
+                          className="absolute inset-x-0 h-px"
+                          style={{
+                            background: isHighlighted
+                              ? "#fbbf24"
+                              : isDraggingThis
+                              ? "#fbbf24"
+                              : "rgba(251,191,36,0.35)",
+                          }}
+                        />
+
+                        {/* Measure badge + drag handle */}
+                        <div
+                          className="relative flex items-center gap-1 bg-amber-400 text-zinc-900 text-xs font-bold rounded shadow-lg pl-1.5 pr-1 py-0.5 cursor-grab active:cursor-grabbing select-none"
+                          onMouseDown={(e) => handlePinMouseDown(e, pos.measure, i)}
+                          onClick={(e) => e.stopPropagation()}
+                          title={`Drag to reposition measure ${pos.measure}`}
+                        >
+                          <GripHorizontal size={10} className="opacity-60" />
+                          {pos.measure}
+                        </div>
+
+                        {/* Delete button */}
+                        <button
+                          className="relative ml-1 w-4 h-4 flex items-center justify-center rounded-full bg-zinc-700 hover:bg-red-500 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => { e.stopPropagation(); deletePosition(pos.measure) }}
+                          title={`Remove measure ${pos.measure}`}
+                        >
+                          <X size={9} />
+                        </button>
                       </div>
-                      <div className="h-px bg-amber-400/40 w-full" style={{ width: PAGE_WIDTH }} />
-                    </div>
-                  ))}
+                    )
+                  })}
               </div>
             ))}
           </div>
         </Document>
 
-        {/* Click prompt overlay */}
+        {/* Prompt */}
         {numPages > 0 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900/90 backdrop-blur border border-amber-400/30 rounded-full px-5 py-2 text-sm text-amber-400 font-medium pointer-events-none shadow-xl">
-            Click to mark start of measure {nextMeasure}
+            Click to mark start of measure {nextMeasure} · drag pins to reposition
           </div>
         )}
       </div>
 
-      {/* ── Control panel ─────────────────────────────────────────────────── */}
+      {/* ── Control panel ───────────────────────────────────────────────── */}
       <div className="w-64 border-l border-zinc-800 bg-zinc-900 flex flex-col shrink-0">
         <div className="px-4 py-4 border-b border-zinc-800">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Mapping</p>
@@ -228,7 +322,7 @@ export default function MeasureMapper({
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   const v = parseInt((e.target as HTMLInputElement).value)
-                  if (!isNaN(v)) jumpToMeasure(v)
+                  if (!isNaN(v)) setNextMeasure(v)
                 }
               }}
             />
@@ -249,14 +343,27 @@ export default function MeasureMapper({
             <p className="text-xs text-zinc-600">None yet — click the PDF to start</p>
           ) : (
             [...positions].sort((a, b) => a.measure - b.measure).map((pos) => (
-              <button
+              <div
                 key={pos.measure}
-                onClick={() => scrollToPosition(pos)}
-                className="w-full flex items-center justify-between text-xs px-2 py-1.5 rounded hover:bg-zinc-800 transition-colors text-left"
+                className={`w-full flex items-center justify-between text-xs px-2 py-1.5 rounded transition-colors ${
+                  highlightedMeasure === pos.measure ? "bg-amber-400/10" : "hover:bg-zinc-800"
+                }`}
               >
-                <span className="text-zinc-100 font-medium">Measure {pos.measure}</span>
-                <span className="text-zinc-500">p.{pos.page} · {Math.round(pos.yPercent * 100)}%</span>
-              </button>
+                <button
+                  className="flex-1 text-left"
+                  onClick={() => scrollToPosition(pos)}
+                >
+                  <span className="text-zinc-100 font-medium">Measure {pos.measure}</span>
+                  <span className="text-zinc-500 ml-2">p.{pos.page} · {Math.round(pos.yPercent * 100)}%</span>
+                </button>
+                <button
+                  onClick={() => deletePosition(pos.measure)}
+                  className="ml-2 p-0.5 text-zinc-600 hover:text-red-400 transition-colors rounded"
+                  title="Delete"
+                >
+                  <X size={12} />
+                </button>
+              </div>
             ))
           )}
         </div>

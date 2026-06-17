@@ -50,9 +50,15 @@ export default function SongForm({ initialData }: Props) {
 
   // Basic metadata
   const [title, setTitle] = useState(initialData?.title ?? "")
-  const [composer, setComposer] = useState(initialData?.composer ?? "")
-  const [lyricist, setLyricist] = useState(initialData?.lyricist ?? "")
-  const [arranger, setArranger] = useState(initialData?.arranger ?? "")
+  const [composers, setComposers] = useState<string[]>(
+    initialData?.composer ? initialData.composer.split(" & ") : [""]
+  )
+  const [lyricists, setLyricists] = useState<string[]>(
+    initialData?.lyricist ? initialData.lyricist.split(" & ") : [""]
+  )
+  const [arrangers, setArrangers] = useState<string[]>(
+    initialData?.arranger ? initialData.arranger.split(" & ") : [""]
+  )
   const [voicing, setVoicing] = useState(initialData?.voicing ?? "SATB")
 
   const [isAcappella, setIsAcappella] = useState(initialData?.isAcappella ?? false)
@@ -181,12 +187,14 @@ export default function SongForm({ initialData }: Props) {
         finalParts.push({ name: part.name, label: part.label, storageUrl, color: part.color })
       }
 
+      const joinField = (arr: string[]) => arr.map((s) => s.trim()).filter(Boolean).join(" & ") || null
+
       const payload = {
         id: songId,
         title,
-        composer,
-        lyricist: lyricist || null,
-        arranger: arranger || null,
+        composer: joinField(composers) ?? "",
+        lyricist: joinField(lyricists),
+        arranger: joinField(arrangers),
         voicing,
         is_acappella: isAcappella,
         price: Math.round(parseFloat(price) * 100),
@@ -225,13 +233,13 @@ export default function SongForm({ initialData }: Props) {
             <input value={title} onChange={(e) => setTitle(e.target.value)} required className={inputCls} />
           </Field>
           <Field label="Composer" required>
-            <input value={composer} onChange={(e) => setComposer(e.target.value)} required className={inputCls} />
+            <MultiField values={composers} onChange={setComposers} placeholder="Composer name" required />
           </Field>
           <Field label="Lyricist">
-            <input value={lyricist} onChange={(e) => setLyricist(e.target.value)} className={inputCls} placeholder="Optional — if different from composer" />
+            <MultiField values={lyricists} onChange={setLyricists} placeholder="Optional — if different from composer" />
           </Field>
           <Field label="Arranger">
-            <input value={arranger} onChange={(e) => setArranger(e.target.value)} className={inputCls} placeholder="Optional" />
+            <MultiField values={arrangers} onChange={setArrangers} placeholder="Optional" />
           </Field>
           <Field label="Voicing">
             <select value={voicing} onChange={(e) => setVoicing(e.target.value)} className={inputCls}>
@@ -445,6 +453,59 @@ function Field({ label, required, children }: { label: string; required?: boolea
         {label}{required && <span className="text-amber-400 ml-0.5">*</span>}
       </label>
       {children}
+    </div>
+  )
+}
+
+function MultiField({
+  values,
+  onChange,
+  placeholder,
+  required,
+}: {
+  values: string[]
+  onChange: (v: string[]) => void
+  placeholder?: string
+  required?: boolean
+}) {
+  function update(i: number, val: string) {
+    const next = [...values]
+    next[i] = val
+    onChange(next)
+  }
+  function add() { onChange([...values, ""]) }
+  function remove(i: number) { onChange(values.filter((_, idx) => idx !== i)) }
+
+  return (
+    <div className="space-y-2">
+      {values.map((v, i) => (
+        <div key={i} className="flex gap-2">
+          <input
+            value={v}
+            onChange={(e) => update(i, e.target.value)}
+            placeholder={placeholder}
+            required={required && i === 0}
+            className={cn(inputCls, "flex-1")}
+          />
+          {values.length > 1 && (
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              className="p-2 text-zinc-500 hover:text-red-400 transition-colors"
+              title="Remove"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="flex items-center gap-1 text-xs text-zinc-500 hover:text-amber-400 transition-colors"
+      >
+        <Plus size={13} /> Add another
+      </button>
     </div>
   )
 }

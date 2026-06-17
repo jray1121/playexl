@@ -25,7 +25,7 @@ export default function ChannelStrip({ track, onVolumeChange, onSoloToggle }: Pr
   const isPiano = PIANO_PARTS.includes(part.name)
 
   return (
-    <div className="px-4 py-4 flex flex-col gap-3">
+    <div className="pl-4 pr-5 py-4 flex flex-col gap-3">
       {/* Part name + solo */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
