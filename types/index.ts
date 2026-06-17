@@ -17,6 +17,12 @@ export interface TimeSigChange {
   clickNoteValue: number // what note value the click track uses (e.g. 4 = quarter, 8 = eighth)
 }
 
+export interface MeasurePosition {
+  measure: number   // 1-indexed
+  page: number      // 1-indexed
+  yPercent: number  // 0–1, Y position as fraction of that page's rendered height
+}
+
 export interface BeatMapEntry {
   timestamp: number     // seconds from start of audio
   measure: number       // 1-indexed
@@ -35,6 +41,7 @@ export interface Song {
   id: string
   title: string
   composer: string
+  lyricist?: string
   arranger?: string
   voicing: string       // e.g. "SATB", "SSA", "TTBB"
   isAcappella: boolean

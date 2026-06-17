@@ -29,6 +29,7 @@ interface Props {
     id: string
     title: string
     composer: string
+    lyricist: string
     arranger: string
     voicing: string
     isAcappella: boolean
@@ -50,8 +51,10 @@ export default function SongForm({ initialData }: Props) {
   // Basic metadata
   const [title, setTitle] = useState(initialData?.title ?? "")
   const [composer, setComposer] = useState(initialData?.composer ?? "")
+  const [lyricist, setLyricist] = useState(initialData?.lyricist ?? "")
   const [arranger, setArranger] = useState(initialData?.arranger ?? "")
   const [voicing, setVoicing] = useState(initialData?.voicing ?? "SATB")
+
   const [isAcappella, setIsAcappella] = useState(initialData?.isAcappella ?? false)
   const [price, setPrice] = useState(((initialData?.price ?? 499) / 100).toString())
   const [published, setPublished] = useState(initialData?.published ?? false)
@@ -182,6 +185,7 @@ export default function SongForm({ initialData }: Props) {
         id: songId,
         title,
         composer,
+        lyricist: lyricist || null,
         arranger: arranger || null,
         voicing,
         is_acappella: isAcappella,
@@ -223,14 +227,34 @@ export default function SongForm({ initialData }: Props) {
           <Field label="Composer" required>
             <input value={composer} onChange={(e) => setComposer(e.target.value)} required className={inputCls} />
           </Field>
+          <Field label="Lyricist">
+            <input value={lyricist} onChange={(e) => setLyricist(e.target.value)} className={inputCls} placeholder="Optional — if different from composer" />
+          </Field>
           <Field label="Arranger">
             <input value={arranger} onChange={(e) => setArranger(e.target.value)} className={inputCls} placeholder="Optional" />
           </Field>
           <Field label="Voicing">
             <select value={voicing} onChange={(e) => setVoicing(e.target.value)} className={inputCls}>
-              {["SATB", "SSA", "SAB", "TTBB", "SSAA", "SSAATB", "Unison", "Two-part"].map((v) => (
-                <option key={v}>{v}</option>
-              ))}
+              <optgroup label="Unison / Two-Part">
+                <option>Unison</option>
+                <option>Two-Part</option>
+              </optgroup>
+              <optgroup label="Mixed">
+                <option>Three-Part Mixed</option>
+                <option>SAB</option>
+                <option>SATB</option>
+              </optgroup>
+              <optgroup label="Treble">
+                <option>SA</option>
+                <option>SSA</option>
+                <option>SSAA</option>
+              </optgroup>
+              <optgroup label="Tenor-Bass">
+                <option>TB</option>
+                <option>TTB</option>
+                <option>TBB</option>
+                <option>TTBB</option>
+              </optgroup>
             </select>
           </Field>
           <Field label="Tempo (BPM)">

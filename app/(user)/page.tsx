@@ -76,12 +76,12 @@ function SongCard({
 }) {
   return (
     <div className={`bg-zinc-900 border rounded-xl overflow-hidden flex flex-col transition-colors ${
-      owned ? "border-amber-400/30 hover:border-amber-400/60" : "border-zinc-800 hover:border-zinc-700"
+      owned ? "border-brand/30 hover:border-brand/60" : "border-zinc-800 hover:border-zinc-700"
     }`}>
       {/* Color bar from first part color */}
       <div
         className="h-1 w-full"
-        style={{ background: song.parts?.[0]?.color ?? "#fbbf24" }}
+        style={{ background: song.parts?.[0]?.color ?? "#873995" }}
       />
 
       <div className="p-5 flex flex-col flex-1 gap-3">
@@ -115,7 +115,7 @@ function SongCard({
           {owned ? (
             <Link
               href={`/songs/${song.id}`}
-              className="bg-amber-400 hover:bg-amber-300 text-zinc-900 font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors"
+              className="bg-brand hover:bg-brand-light text-zinc-900 font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors"
             >
               Practice →
             </Link>
