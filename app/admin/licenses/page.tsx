@@ -18,5 +18,5 @@ export default async function LicensesPage() {
     .eq("id", user!.id)
     .single()
 
-  return <LicensesClient licenses={licenses ?? []} teacherCode={profile?.teacher_code ?? null} />
+  return <LicensesClient licenses={(licenses ?? []) as any} teacherCode={profile?.teacher_code ?? null} />
 }

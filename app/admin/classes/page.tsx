@@ -21,8 +21,8 @@ export default async function ClassesPage() {
 
   return (
     <ClassesClient
-      classes={classes ?? []}
-      allSongs={songs ?? []}
+      classes={(classes ?? []) as any}
+      allSongs={(songs ?? []) as any}
       teacherCode={profile?.teacher_code ?? null}
     />
   )

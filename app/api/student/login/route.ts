@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     })
     .eq("id", license.id)
 
-  const className = (license.classes as { name: string } | null)?.name ?? "Class"
+  const className = (license.classes as unknown as { name: string } | null)?.name ?? "Class"
   const label = license.label ?? className
 
   const res = NextResponse.json({ ok: true, label })
