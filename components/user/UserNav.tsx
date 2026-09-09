@@ -18,12 +18,17 @@ export default function UserNav() {
   const router = useRouter()
 
   useEffect(() => {
+    const label = getStudentLabel()
+    setStudentLabel(label)
+    // Skip Supabase auth entirely for student sessions — no teacher session exists,
+    // and the visibility-change token refresh would just throw a noisy fetch error.
+    if (label !== null) return
+
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null)
     })
-    setStudentLabel(getStudentLabel())
     return () => subscription.unsubscribe()
   }, [])
 

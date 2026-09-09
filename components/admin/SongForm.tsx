@@ -201,12 +201,27 @@ export default function SongForm({ initialData }: Props) {
 
   // ── Upload helpers ───────────────────────────────────────────────────────────
 
-  async function uploadFile(file: File, bucket: string, path: string): Promise<string> {
+  async function uploadFile(file: File, bucket: string, path: string, oldUrl?: string): Promise<string> {
     const supabase = createClient()
+    // Delete the old file if it exists at a different path (e.g. extension changed)
+    if (oldUrl) {
+      try {
+        const url = new URL(oldUrl)
+        // Extract the storage path from the public URL: /storage/v1/object/public/{bucket}/{path}
+        const prefix = `/storage/v1/object/public/${bucket}/`
+        const oldPath = url.pathname.startsWith(prefix)
+          ? decodeURIComponent(url.pathname.slice(prefix.length).split("?")[0])
+          : null
+        if (oldPath && oldPath !== path) {
+          await supabase.storage.from(bucket).remove([oldPath])
+        }
+      } catch {}
+    }
     const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
     if (error) throw new Error(error.message)
     const { data } = supabase.storage.from(bucket).getPublicUrl(path)
-    return data.publicUrl
+    // Append a version timestamp so browsers always fetch the new file instead of serving cache
+    return `${data.publicUrl}?v=${Date.now()}`
   }
 
   // ── Save ─────────────────────────────────────────────────────────────────────
@@ -238,7 +253,7 @@ export default function SongForm({ initialData }: Props) {
         let storageUrl = part.storageUrl
         if (part.file) {
           const ext = part.file.name.split(".").pop()
-          storageUrl = await uploadFile(part.file, "audio-stems", `${songId}/${part.name}.${ext}`)
+          storageUrl = await uploadFile(part.file, "audio-stems", `${songId}/${part.name}.${ext}`, part.storageUrl)
         }
         finalParts.push({ name: part.name, label: part.label, storageUrl, color: part.color })
       }
@@ -295,7 +310,7 @@ export default function SongForm({ initialData }: Props) {
       const finalParts: SongPart[] = []
       for (const part of parts) {
         let storageUrl = part.storageUrl
-        if (part.file) storageUrl = await uploadFile(part.file, "audio-stems", `${songId}/${part.name}.${part.file.name.split(".").pop()}`)
+        if (part.file) storageUrl = await uploadFile(part.file, "audio-stems", `${songId}/${part.name}.${part.file.name.split(".").pop()}`, part.storageUrl)
         finalParts.push({ name: part.name, label: part.label, storageUrl, color: part.color })
       }
       const joinField = (arr: string[]) => arr.map((s) => s.trim()).filter(Boolean).join(" & ") || null
