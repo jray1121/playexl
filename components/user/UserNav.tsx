@@ -51,7 +51,7 @@ export default function UserNav() {
       <div className="w-full px-6 flex items-center justify-between h-14">
         <Link href="/" className="flex items-center gap-2 font-bold text-brand text-lg tracking-wide">
           <Music size={20} />
-          PlayEXL
+          MusicEXL
         </Link>
         <div className="flex items-center gap-4">
           {user ? (

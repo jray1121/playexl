@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
           <div className="w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center">
             <Music className="text-brand" size={24} />
           </div>
-          <h1 className="text-2xl font-bold text-zinc-100">PlayEXL Admin</h1>
+          <h1 className="text-2xl font-bold text-zinc-100">MusicEXL Admin</h1>
           <p className="text-zinc-400 text-sm">Sign in to manage your song library</p>
         </div>
 

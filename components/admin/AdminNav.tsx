@@ -26,7 +26,7 @@ export default function AdminNav() {
     <nav className="border-b border-zinc-800 bg-zinc-900">
       <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-14">
         <div className="flex items-center gap-8">
-          <span className="font-bold text-brand tracking-wide text-lg">PlayEXL Admin</span>
+          <span className="font-bold text-brand tracking-wide text-lg">MusicEXL Admin</span>
           <div className="flex gap-1">
             {links.map(({ href, label, icon: Icon }) => (
               <Link
