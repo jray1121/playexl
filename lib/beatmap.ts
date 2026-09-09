@@ -9,7 +9,8 @@ import type { BeatMapEntry, TimeSigChange } from "@/types"
  */
 export function buildBeatMap(
   onsets: number[],
-  timeSigMap: TimeSigChange[]
+  timeSigMap: TimeSigChange[],
+  hasCountOff = false
 ): BeatMapEntry[] {
   if (!onsets.length || !timeSigMap.length) return []
 
@@ -17,7 +18,10 @@ export function buildBeatMap(
   const sigMap = [...timeSigMap].sort((a, b) => a.measure - b.measure)
 
   const beatMap: BeatMapEntry[] = []
-  let measure = 1
+  // A cappella pieces typically have a full count-off measure of clicks
+  // before the music starts (no piano to give the starting pitch/tempo).
+  // Label that lead-in measure 0 so measure 1 always matches the printed score.
+  let measure = hasCountOff ? 0 : 1
   let beat = 1
   let sigIndex = 0
 
@@ -33,7 +37,11 @@ export function buildBeatMap(
 
   for (let i = 0; i < onsets.length; i++) {
     const sig = currentSig()
-    const beatsPerMeasure = sig.numerator
+    // How many clicks fill this measure depends on the click note value relative
+    // to the denominator. e.g. 6/8 with eighth-note clicks = 6; 4/4 with
+    // quarter-note clicks = 4; 4/4 with eighth-note clicks = 8.
+    const clickNote = sig.clickNoteValue ?? sig.denominator
+    const clicksPerMeasure = (sig.numerator * clickNote) / sig.denominator
 
     beatMap.push({
       timestamp: onsets[i],
@@ -43,7 +51,7 @@ export function buildBeatMap(
     })
 
     beat++
-    if (beat > beatsPerMeasure) {
+    if (beat > clicksPerMeasure) {
       beat = 1
       measure++
       // Advance sig pointer if next sig starts at new measure
@@ -71,19 +79,21 @@ export function measureToTimestamp(
   return entry ? entry.timestamp : null
 }
 
-/** Given a timestamp, return the nearest beat map entry. */
+/** Given a timestamp, return the most recent beat that has already started. */
 export function timestampToBeat(
   beatMap: BeatMapEntry[],
   timestamp: number
 ): BeatMapEntry | null {
   if (!beatMap.length) return null
-  let closest = beatMap[0]
+  let current = beatMap[0]
   for (const entry of beatMap) {
-    if (Math.abs(entry.timestamp - timestamp) < Math.abs(closest.timestamp - timestamp)) {
-      closest = entry
+    if (entry.timestamp <= timestamp) {
+      current = entry
+    } else {
+      break
     }
   }
-  return closest
+  return current
 }
 
 /**

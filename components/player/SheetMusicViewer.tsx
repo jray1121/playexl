@@ -36,6 +36,8 @@ interface Props {
   measurePositions?: MeasurePosition[]
   zoom: number
   seekMeasure?: number | null  // set to a measure number to imperatively scroll there
+  autoScroll?: boolean
+  onAutoScrollChange?: (v: boolean) => void
 }
 
 export default function SheetMusicViewer({
@@ -46,6 +48,8 @@ export default function SheetMusicViewer({
   measurePositions,
   zoom,
   seekMeasure,
+  autoScroll = true,
+  onAutoScrollChange,
 }: Props) {
   const [numPages, setNumPages] = useState(0)
   const [pageDimensions, setPageDimensions] = useState<{ height: number }[]>([])
@@ -128,15 +132,30 @@ export default function SheetMusicViewer({
       const line = lines[i]
       const nextLine = lines[i + 1]
 
-      // Last measure on this line
-      const lastMeasureOnLine = Math.max(...line.map((p) => p.measure))
-
-      // All beats belonging to that measure
-      const beatsOnLastMeasure = beatMap.filter((b) => b.measure === lastMeasureOnLine)
-      if (!beatsOnLastMeasure.length) continue
-
-      // Last beat of that measure
-      const lastBeat = beatsOnLastMeasure.reduce((a, b) => (a.beat > b.beat ? a : b))
+      // Walk backward through this line's measures until we find one with
+      // beat-map data. The very last measure may have no detected beats
+      // (rests, pickup, etc.) — falling back avoids silently dropping the
+      // whole line's trigger, which causes a one-line scroll lag.
+      const measuresOnLineDesc = [...new Set(line.map((p) => p.measure))].sort((a, b) => b - a)
+      let lastBeat: BeatMapEntry | null = null
+      for (const m of measuresOnLineDesc) {
+        const beatsOnMeasure = beatMap.filter((b) => b.measure === m)
+        if (beatsOnMeasure.length) {
+          const timeSig = beatsOnMeasure[0].timeSig
+          const [numStr, denStr] = timeSig.split("/")
+          const numerator = parseInt(numStr)
+          const denominator = parseInt(denStr)
+          // Scroll 2 conducting beats before the barline:
+          //   simple meter (e.g. 3/4, 4/4): trigger on beat (numerator - 2)
+          //   compound meter (e.g. 6/8): trigger on beat 1 (= 2 dotted-quarter pulses of look-ahead)
+          const isCompound = denominator === 8 && numerator % 3 === 0
+          const triggerBeat = isCompound ? 1 : Math.max(1, numerator - 2)
+          const triggerEntry = beatsOnMeasure.find((b) => b.beat === triggerBeat)
+          lastBeat = triggerEntry ?? beatsOnMeasure.reduce((a, b) => (a.beat > b.beat ? a : b))
+          break
+        }
+      }
+      if (!lastBeat) continue
 
       // First measure of the next line
       const firstMeasureNextLine = Math.min(...nextLine.map((p) => p.measure))
@@ -177,6 +196,7 @@ export default function SheetMusicViewer({
 
   // Watch currentTime and fire scroll when a trigger timestamp is passed
   useEffect(() => {
+    if (!autoScroll) return
     if (!scrollTriggers.length) return
 
     const container = containerRef.current
@@ -198,7 +218,28 @@ export default function SheetMusicViewer({
 
     const scrollTarget = Math.max(0, targetY - container.clientHeight * SCROLL_TARGET_FRAC)
     easeTo(scrollTarget)
-  }, [currentTime, scrollTriggers])
+  }, [currentTime, scrollTriggers, autoScroll])
+
+  // When auto-scroll is re-enabled, jump to the correct position immediately
+  useEffect(() => {
+    if (!autoScroll) return
+    const container = containerRef.current
+    const dims = pageDimRef.current
+    if (!container || !dims.length || !scrollTriggers.length) return
+
+    const t = currentTimeRef.current
+    const lastPassed = scrollTriggers
+      .filter((trig) => t >= trig.triggerTimestamp)
+      .sort((a, b) => b.triggerTimestamp - a.triggerTimestamp)[0]
+
+    if (lastPassed) {
+      lastFiredTrigger.current = lastPassed.triggerTimestamp
+      const targetY = getMeasureY(lastPassed.targetMeasure, dims)
+      if (targetY !== null) {
+        easeTo(Math.max(0, targetY - container.clientHeight * SCROLL_TARGET_FRAC))
+      }
+    }
+  }, [autoScroll, scrollTriggers])
 
   // Reset trigger memory when currentTime goes back near zero (song restart / rewind)
   useEffect(() => {
@@ -232,6 +273,18 @@ export default function SheetMusicViewer({
   useEffect(() => () => cancelAnimationFrame(scrollAnimRef.current), [])
 
   return (
+    <div className="relative h-full">
+      {onAutoScrollChange && (
+        <label className="absolute top-3 right-3 z-10 flex items-center gap-1.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={autoScroll}
+            onChange={(e) => onAutoScrollChange(e.target.checked)}
+            className="accent-[#17618A] w-3.5 h-3.5 cursor-pointer"
+          />
+          <span className="text-[11px] font-medium text-zinc-400">Auto-scroll</span>
+        </label>
+      )}
     <div ref={containerRef} className="h-full overflow-y-auto">
       <Document
         file={url}
@@ -256,6 +309,7 @@ export default function SheetMusicViewer({
           ))}
         </div>
       </Document>
+    </div>
     </div>
   )
 }

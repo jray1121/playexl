@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import SongForm from "@/components/admin/SongForm"
 import DeleteSongButton from "@/components/admin/DeleteSongButton"
 import Link from "next/link"
-import { MapPin } from "lucide-react"
+import { MapPin, Play } from "lucide-react"
 
 export default async function EditSongPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -38,6 +38,13 @@ export default async function EditSongPage({ params }: { params: Promise<{ id: s
           <p className="text-zinc-400 text-sm mt-1">{song.title}</p>
         </div>
         <div className="flex items-center gap-3">
+          <Link
+            href={`/songs/${song.id}`}
+            target="_blank"
+            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+          >
+            <Play size={15} /> Preview Player
+          </Link>
           {song.sheet_music_url && (
             <Link
               href={`/admin/songs/${song.id}/map-measures`}

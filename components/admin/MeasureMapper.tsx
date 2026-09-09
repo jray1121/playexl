@@ -154,7 +154,26 @@ export default function MeasureMapper({
   // ── Delete ────────────────────────────────────────────────────────────────
 
   function deletePosition(measure: number) {
-    setPositions((prev) => prev.filter((p) => p.measure !== measure))
+    setPositions((prev) => {
+      const next = prev.filter((p) => p.measure !== measure)
+      // Keep "next measure" in sync: if nothing is left, go back to 1.
+      // If we deleted the highest-numbered marker, pull the counter back
+      // down to match it — otherwise it stays stuck wherever it was,
+      // regardless of what order things get deleted in.
+      setNextMeasure((nm) => {
+        if (next.length === 0) return 1
+        const highest = Math.max(...next.map((p) => p.measure)) + 1
+        return measure === nm - 1 ? highest : nm
+      })
+      return next
+    })
+    setSaved(false)
+  }
+
+  function resetAll() {
+    if (positions.length > 0 && !confirm("Clear all mapped measures and start over from measure 1?")) return
+    setPositions([])
+    setNextMeasure(1)
     setSaved(false)
   }
 
@@ -297,9 +316,18 @@ export default function MeasureMapper({
 
       {/* ── Control panel ───────────────────────────────────────────────── */}
       <div className="w-64 border-l border-zinc-800 bg-zinc-900 flex flex-col shrink-0">
-        <div className="px-4 py-4 border-b border-zinc-800">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Mapping</p>
-          <p className="font-semibold text-zinc-100 text-sm truncate">{songTitle}</p>
+        <div className="px-4 py-4 border-b border-zinc-800 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Mapping</p>
+            <p className="font-semibold text-zinc-100 text-sm truncate">{songTitle}</p>
+          </div>
+          <button
+            onClick={resetAll}
+            title="Clear all markers and start over from measure 1"
+            className="shrink-0 text-[10px] font-semibold text-zinc-500 hover:text-red-400 bg-zinc-800 hover:bg-zinc-700 px-2 py-1 rounded transition-colors"
+          >
+            Reset All
+          </button>
         </div>
 
         {/* Status */}

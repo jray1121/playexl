@@ -41,7 +41,7 @@ export default function Transport({
   }
 
   return (
-    <div className="border-t border-zinc-800 bg-zinc-900 shrink-0 px-4 py-2 flex items-center gap-3">
+    <div className="border-t border-zinc-800 bg-zinc-950 shrink-0 px-4 py-2 flex items-center gap-3">
 
       {/* Skip + Play */}
       <div className="flex items-center gap-1.5 shrink-0">

@@ -49,6 +49,26 @@ create policy "Users can read own purchases" on purchases
 create policy "Admin can read all purchases" on purchases
   for select using (auth.role() = 'authenticated');
 
+-- Student licenses (teacher-managed, no student PII)
+create table if not exists licenses (
+  id uuid primary key default gen_random_uuid(),
+  teacher_id uuid not null references auth.users(id) on delete cascade,
+  code text not null unique,           -- e.g. "EXL-A3B4-C5D6"
+  label text,                          -- optional teacher label e.g. "Period 2 – Seat 4"
+  session_token text,                  -- set on first use; only one active session per code
+  activated_at timestamptz,
+  last_active_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table licenses enable row level security;
+
+-- Teachers can manage their own licenses
+create policy "Teachers manage own licenses" on licenses
+  for all using (auth.uid() = teacher_id);
+
+-- API routes use the service role key to validate student tokens (bypasses RLS)
+
 -- Storage buckets (create these in Supabase Dashboard > Storage)
 -- Bucket: sheet-music    (public)
 -- Bucket: audio-stems    (public)

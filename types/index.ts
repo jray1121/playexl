@@ -9,6 +9,18 @@ export type PartName =
   | "bass2"
   | "piano"
   | "full_mix"
+  | "click"
+  | "kate"
+  | "tiffany"
+  | "ashley"
+  | "sarah"
+  | "chrystal"
+  | "ej"
+  | "drew"
+  | "jamey"
+  | "kurt"
+  | "johnny"
+  | "karl"
 
 export interface TimeSigChange {
   measure: number       // 1-indexed measure where this time sig starts

@@ -1,28 +1,49 @@
 "use client"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Trash2, Upload, Loader2, Music, FileText, Activity } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import type { SongPart, TimeSigChange, PartName } from "@/types"
 import { detectOnsets, buildBeatMap } from "@/lib/beatmap"
+import { baseColorForVoicing, generatePartColors, VOCTAVE_MEMBER_COLORS } from "@/lib/voicingColors"
 import BeatMapEditor from "./BeatMapEditor"
 import PartUploader from "./PartUploader"
 
+// Voice-part colors are no longer fixed per part — Excelcia assigns one base
+// color per voicing (see lib/voicingColors.ts), and individual parts are
+// colored as shades within that one color. The `color` values below are only
+// placeholders, immediately overwritten by the effect that watches voicing +
+// selected parts. Piano and Full Mix aren't "voices" so they keep fixed colors.
 const PART_OPTIONS: { name: PartName; label: string; color: string }[] = [
-  { name: "soprano",       label: "Soprano I",    color: "#f472b6" },
-  { name: "soprano2",      label: "Soprano II",   color: "#fb7185" },
-  { name: "alto",          label: "Alto I",       color: "#a78bfa" },
-  { name: "alto2",         label: "Alto II",      color: "#818cf8" },
-  { name: "tenor",         label: "Tenor I",      color: "#38bdf8" },
-  { name: "tenor2",        label: "Tenor II",     color: "#22d3ee" },
-  { name: "bass",          label: "Bass I",       color: "#4ade80" },
-  { name: "bass2",         label: "Bass II",      color: "#86efac" },
+  { name: "soprano",       label: "Soprano I",    color: "#9B2D63" },
+  { name: "soprano2",      label: "Soprano II",   color: "#9B2D63" },
+  { name: "alto",          label: "Alto I",       color: "#9B2D63" },
+  { name: "alto2",         label: "Alto II",      color: "#9B2D63" },
+  { name: "tenor",         label: "Tenor I",      color: "#9B2D63" },
+  { name: "tenor2",        label: "Tenor II",     color: "#9B2D63" },
+  { name: "bass",          label: "Bass I",       color: "#9B2D63" },
+  { name: "bass2",         label: "Bass II",      color: "#9B2D63" },
   { name: "piano",         label: "Piano",         color: "#f97316" },
   { name: "full_mix",      label: "Full Mix",      color: "#94a3b8" },
 ]
 
+// Canonical order for assigning shades light → dark across however many
+// voice parts a song actually has (4 for plain SATB, 8 with full divisi, etc).
+const VOICE_PART_ORDER: PartName[] = ["soprano", "soprano2", "alto", "alto2", "tenor", "tenor2", "bass", "bass2"]
+
 const INSTRUMENTAL_PARTS: PartName[] = ["piano"]
+
+const VOCTAVE_MEMBERS = ["kate","tiffany","ashley","sarah","chrystal","ej","drew","jamey","kurt","johnny","karl"] as const
+const VOCTAVE_PART_OPTIONS: { name: PartName; label: string; color: string }[] = [
+  ...VOCTAVE_MEMBERS.map((m) => ({
+    name: m as PartName,
+    label: m.charAt(0).toUpperCase() + m.slice(1),
+    color: VOCTAVE_MEMBER_COLORS[m],
+  })),
+  { name: "click",    label: "Click Track", color: VOCTAVE_MEMBER_COLORS.click },
+  { name: "full_mix", label: "Full Mix",    color: VOCTAVE_MEMBER_COLORS.full_mix },
+]
 
 interface Props {
   initialData?: Partial<{
@@ -63,6 +84,7 @@ export default function SongForm({ initialData }: Props) {
 
   const [isAcappella, setIsAcappella] = useState(initialData?.isAcappella ?? false)
   const [price, setPrice] = useState(((initialData?.price ?? 499) / 100).toString())
+  const [sku, setSku] = useState((initialData as { sku?: string })?.sku ?? "")
   const [published, setPublished] = useState(initialData?.published ?? false)
   const [tempo, setTempo] = useState(initialData?.tempo?.toString() ?? "")
 
@@ -92,6 +114,36 @@ export default function SongForm({ initialData }: Props) {
   const [error, setError] = useState("")
 
   // ── Part management ─────────────────────────────────────────────────────────
+
+  // When voicing switches to Voctave, auto-populate all 13 Voctave parts.
+  // When switching away, clear them. For non-Voctave voicings, recompute
+  // voice-part colors as shades of the voicing's brand color.
+  useEffect(() => {
+    if (voicing === "Voctave") {
+      setParts((prev) => {
+        // Merge: keep existing storageUrls, fill in any missing parts with empty slots
+        const existing = new Map(prev.map((p) => [p.name, p]))
+        return VOCTAVE_PART_OPTIONS.map((p) => ({
+          name: p.name,
+          label: p.label,
+          color: p.color,
+          storageUrl: existing.get(p.name)?.storageUrl ?? "",
+        }))
+      })
+      setSelectedPartNames(new Set(VOCTAVE_PART_OPTIONS.map((p) => p.name)))
+      setIsAcappella(true)
+      return
+    }
+    const voiceNamesInOrder = VOICE_PART_ORDER.filter((n) => selectedPartNames.has(n))
+    if (voiceNamesInOrder.length === 0) return
+    const base = baseColorForVoicing(voicing)
+    const shades = generatePartColors(base, voiceNamesInOrder.length)
+    const colorByName = new Map(voiceNamesInOrder.map((n, i) => [n, shades[i]]))
+    setParts((prev) =>
+      prev.map((p) => (colorByName.has(p.name) ? { ...p, color: colorByName.get(p.name)! } : p))
+    )
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voicing])
 
   function togglePart(name: PartName) {
     const next = new Set(selectedPartNames)
@@ -124,16 +176,20 @@ export default function SongForm({ initialData }: Props) {
   // ── Beat map analysis ────────────────────────────────────────────────────────
 
   async function analyzeClickTrack() {
-    const file = clickFile
-    if (!file) return
+    // Use a freshly selected file if there is one, otherwise re-fetch the
+    // already-uploaded click track so the beat map can be regenerated after
+    // editing the time signature without needing to re-upload anything.
+    if (!clickFile && !clickUrl) return
     setAnalyzingClick(true)
     try {
-      const arrayBuffer = await file.arrayBuffer()
+      const arrayBuffer = clickFile
+        ? await clickFile.arrayBuffer()
+        : await (await fetch(clickUrl)).arrayBuffer()
       const audioCtx = new OfflineAudioContext(1, 1, 44100)
       const decoded = await audioCtx.decodeAudioData(arrayBuffer)
       const samples = decoded.getChannelData(0)
       const onsets = detectOnsets(samples, decoded.sampleRate, 0.15)
-      const map = buildBeatMap(onsets, timeSigMap)
+      const map = buildBeatMap(onsets, timeSigMap, isAcappella)
       setBeatMap(map)
       setBeatMapReady(true)
     } catch (e) {
@@ -198,6 +254,7 @@ export default function SongForm({ initialData }: Props) {
         voicing,
         is_acappella: isAcappella,
         price: Math.round(parseFloat(price) * 100),
+        sku: sku.trim().toUpperCase() || null,
         published,
         tempo: tempo ? parseInt(tempo) : null,
         parts: finalParts,
@@ -219,6 +276,46 @@ export default function SongForm({ initialData }: Props) {
       router.refresh()
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "An error occurred")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handlePublish() {
+    setPublished(true)
+    setSaving(true)
+    setError("")
+    try {
+      const supabase = createClient()
+      const songId = initialData?.id ?? crypto.randomUUID()
+      let finalSheetUrl = sheetMusicUrl
+      if (sheetMusicFile) finalSheetUrl = await uploadFile(sheetMusicFile, "sheet-music", `${songId}/score.pdf`)
+      let finalClickUrl = clickUrl
+      if (clickFile) finalClickUrl = await uploadFile(clickFile, "click-tracks", `${songId}/click.${clickFile.name.split(".").pop()}`)
+      const finalParts: SongPart[] = []
+      for (const part of parts) {
+        let storageUrl = part.storageUrl
+        if (part.file) storageUrl = await uploadFile(part.file, "audio-stems", `${songId}/${part.name}.${part.file.name.split(".").pop()}`)
+        finalParts.push({ name: part.name, label: part.label, storageUrl, color: part.color })
+      }
+      const joinField = (arr: string[]) => arr.map((s) => s.trim()).filter(Boolean).join(" & ") || null
+      const payload = {
+        id: songId, title, composer: joinField(composers) ?? "", lyricist: joinField(lyricists),
+        arranger: joinField(arrangers), voicing, is_acappella: isAcappella,
+        price: Math.round(parseFloat(price) * 100), sku: sku.trim().toUpperCase() || null,
+        published: true, tempo: tempo ? parseInt(tempo) : null, parts: finalParts,
+        sheet_music_url: finalSheetUrl, click_track_url: finalClickUrl || null,
+        beat_map: beatMap.length ? beatMap : null, time_sig_map: timeSigMap,
+        updated_at: new Date().toISOString(),
+        ...(isEdit ? {} : { created_at: new Date().toISOString() }),
+      }
+      const { error: dbError } = await supabase.from("songs").upsert(payload)
+      if (dbError) throw new Error(dbError.message)
+      router.push("/admin/songs")
+      router.refresh()
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "An error occurred")
+      setPublished(false)
     } finally {
       setSaving(false)
     }
@@ -263,6 +360,9 @@ export default function SongForm({ initialData }: Props) {
                 <option>TBB</option>
                 <option>TTBB</option>
               </optgroup>
+              <optgroup label="Voctave">
+                <option>Voctave</option>
+              </optgroup>
             </select>
           </Field>
           <Field label="Tempo (BPM)">
@@ -288,6 +388,15 @@ export default function SongForm({ initialData }: Props) {
               />
             </div>
           </Field>
+          <Field label="SKU">
+            <input
+              type="text"
+              value={sku}
+              onChange={(e) => setSku(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, ""))}
+              placeholder="e.g. EXL-1042"
+              className={cn(inputCls, "font-mono tracking-widest uppercase")}
+            />
+          </Field>
         </div>
         <div className="flex gap-6 mt-2">
           <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
@@ -309,15 +418,6 @@ export default function SongForm({ initialData }: Props) {
             />
             A cappella (no accompaniment track)
           </label>
-          <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={published}
-              onChange={(e) => setPublished(e.target.checked)}
-              className="accent-amber-400 w-4 h-4"
-            />
-            Publish immediately
-          </label>
         </div>
       </Section>
 
@@ -334,26 +434,32 @@ export default function SongForm({ initialData }: Props) {
       </Section>
 
       {/* ── Voice Parts ── */}
-      <Section title="Voice Parts & Audio Stems">
-        <p className="text-zinc-400 text-sm mb-4">Select the parts this song uses, then upload the isolated audio stem for each.</p>
-        <div className="flex flex-wrap gap-2 mb-5">
-          {PART_OPTIONS.filter((p) => !isAcappella || !INSTRUMENTAL_PARTS.includes(p.name)).map(({ name, label, color }) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => togglePart(name)}
-              style={selectedPartNames.has(name) ? { borderColor: color, color } : {}}
-              className={cn(
-                "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
-                selectedPartNames.has(name)
-                  ? "bg-current/10"
-                  : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+      <Section title={voicing === "Voctave" ? "Member Stems & Click" : "Voice Parts & Audio Stems"}>
+        {voicing === "Voctave" ? (
+          <p className="text-zinc-400 text-sm mb-4">Upload the audio stem for each Voctave member, the click track, and the full mix.</p>
+        ) : (
+          <>
+            <p className="text-zinc-400 text-sm mb-4">Select the parts this song uses, then upload the isolated audio stem for each.</p>
+            <div className="flex flex-wrap gap-2 mb-5">
+              {PART_OPTIONS.filter((p) => !isAcappella || !INSTRUMENTAL_PARTS.includes(p.name)).map(({ name, label, color }) => (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => togglePart(name)}
+                  style={selectedPartNames.has(name) ? { borderColor: color, color } : {}}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-medium border transition-all",
+                    selectedPartNames.has(name)
+                      ? "bg-current/10"
+                      : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         {parts.length > 0 && (
           <div className="space-y-3">
@@ -394,11 +500,11 @@ export default function SongForm({ initialData }: Props) {
             <button
               type="button"
               onClick={analyzeClickTrack}
-              disabled={analyzingClick || !clickFile}
+              disabled={analyzingClick}
               className="flex items-center gap-2 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
             >
               {analyzingClick ? <Loader2 size={15} className="animate-spin" /> : <Activity size={15} />}
-              {analyzingClick ? "Analyzing…" : clickFile ? "Analyze Click Track" : "Upload new click to re-analyze"}
+              {analyzingClick ? "Analyzing…" : beatMapReady ? "Re-analyze Click Track" : "Analyze Click Track"}
             </button>
             {beatMapReady && (
               <span className="text-green-400 text-sm font-medium">
@@ -415,10 +521,19 @@ export default function SongForm({ initialData }: Props) {
         <button
           type="submit"
           disabled={saving}
+          className="flex items-center gap-2 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 text-zinc-100 font-semibold px-6 py-2.5 rounded-lg transition-colors"
+        >
+          {saving && <Loader2 size={15} className="animate-spin" />}
+          {saving ? "Saving…" : isEdit ? "Save Draft" : "Save Draft"}
+        </button>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={handlePublish}
           className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 text-zinc-900 font-semibold px-6 py-2.5 rounded-lg transition-colors"
         >
           {saving && <Loader2 size={15} className="animate-spin" />}
-          {saving ? "Saving…" : isEdit ? "Save Changes" : "Create Song"}
+          {saving ? "Publishing…" : published ? "Save & Keep Published" : "Publish"}
         </button>
         <button
           type="button"

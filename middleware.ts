@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase())
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
@@ -22,21 +24,43 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+  const email = user?.email?.toLowerCase() ?? ""
+  const isAdmin = ADMIN_EMAILS.includes(email)
 
   const path = request.nextUrl.pathname
-  const isAdminRoute = path.startsWith("/admin")
-  const isAdminLogin = path === "/admin/login"
+  const studentToken = request.cookies.get("student_token")?.value
 
-  if (isAdminRoute && !isAdminLogin && !user) {
-    return NextResponse.redirect(new URL("/admin/login", request.url))
+  // ── Admin routes ─────────────────────────────────────────────────────────
+  if (path.startsWith("/admin")) {
+    if (path === "/admin/login") {
+      if (user && isAdmin) return NextResponse.redirect(new URL("/admin", request.url))
+      return supabaseResponse
+    }
+    if (!user) return NextResponse.redirect(new URL("/admin/login", request.url))
+    if (!isAdmin) return NextResponse.redirect(new URL("/teacher", request.url))
+    return supabaseResponse
   }
-  if (isAdminLogin && user) {
-    return NextResponse.redirect(new URL("/admin", request.url))
+
+  // ── Teacher routes ────────────────────────────────────────────────────────
+  if (path.startsWith("/teacher")) {
+    if (path === "/teacher/login" || path === "/teacher/signup") {
+      if (user) return NextResponse.redirect(new URL("/teacher", request.url))
+      return supabaseResponse
+    }
+    if (!user) return NextResponse.redirect(new URL("/teacher/login", request.url))
+    return supabaseResponse
+  }
+
+  // ── Student / public routes ───────────────────────────────────────────────
+  if (path === "/" || path.startsWith("/songs")) {
+    if (!user && !studentToken) {
+      return NextResponse.redirect(new URL("/student", request.url))
+    }
   }
 
   return supabaseResponse
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/teacher/:path*", "/", "/songs/:path*"],
 }

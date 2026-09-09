@@ -1,146 +1,124 @@
 import { createClient } from "@/lib/supabase/server"
-import Link from "next/link"
-import { Lock, Music } from "lucide-react"
+import { cookies } from "next/headers"
+import { Music } from "lucide-react"
+import LibrarySection from "@/components/user/LibrarySection"
+import SongCard from "@/components/user/SongCard"
+import { VOICING_CATEGORIES, categoryFor } from "@/lib/voicingCategories"
 
 export default async function LibraryPage() {
   const supabase = await createClient()
+  const cookieStore = await cookies()
 
   const { data: { user } } = await supabase.auth.getUser()
+  const studentClassId = cookieStore.get("student_class_id")?.value ?? null
 
-  const { data: songs } = await supabase
-    .from("songs")
-    .select("id, title, composer, arranger, voicing, is_acappella, price, parts")
-    .eq("published", true)
-    .order("title")
+  let songs: { id: string; title: string; composer: string; arranger: string | null; voicing: string; is_acappella: boolean; price: number; parts: unknown[] }[] = []
 
-  // Fetch purchases for logged-in user
-  let purchasedIds = new Set<string>()
-  if (user) {
-    const { data: purchases } = await supabase
-      .from("purchases")
+  // Student cookie takes priority — if present, always show only their assigned songs
+  // even if a teacher Supabase session is also active in the browser
+  if (studentClassId) {
+    // Student: fetch song IDs for this class, then load those songs
+    const { data: classSongs } = await supabase
+      .from("class_songs")
       .select("song_id")
-      .eq("user_id", user.id)
-    purchasedIds = new Set(purchases?.map((p) => p.song_id) ?? [])
+      .eq("class_id", studentClassId)
+    const songIds = classSongs?.map((cs) => cs.song_id) ?? []
+    if (songIds.length > 0) {
+      const { data } = await supabase
+        .from("songs")
+        .select("id, title, composer, arranger, voicing, is_acappella, price, parts")
+        .in("id", songIds)
+        .eq("published", true)
+        .order("title")
+      songs = data ?? []
+    }
+  } else if (user) {
+    // Teacher/admin: sees all published songs
+    const { data } = await supabase
+      .from("songs")
+      .select("id, title, composer, arranger, voicing, is_acappella, price, parts")
+      .eq("published", true)
+      .order("title")
+    songs = data ?? []
   }
 
-  return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-zinc-100">Song Library</h1>
-        <p className="text-zinc-400 mt-2">
-          {songs?.length ?? 0} songs available for practice
-        </p>
-      </div>
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase())
+  const isAdmin = !!user && ADMIN_EMAILS.includes((user.email ?? "").toLowerCase())
 
-      {!songs?.length ? (
-        <div className="flex flex-col items-center py-24 gap-3 text-zinc-500">
-          <Music size={40} />
-          <p className="text-lg">No songs published yet.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {songs.map((song) => {
-            const owned = purchasedIds.has(song.id)
-            return (
-              <SongCard
-                key={song.id}
-                song={song}
-                owned={owned}
-                loggedIn={!!user}
-              />
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function SongCard({
-  song,
-  owned,
-  loggedIn,
-}: {
-  song: {
-    id: string
-    title: string
-    composer: string
-    arranger?: string
-    voicing: string
-    is_acappella: boolean
-    price: number
-    parts: { name: string; color: string }[]
+  // For teachers: find which songs are assigned to any of their classes
+  const assignedIds = new Set<string>()
+  if (user && !isAdmin) {
+    const { data: classSongs } = await supabase
+      .from("class_songs")
+      .select("song_id, classes!inner(teacher_id)")
+      .eq("classes.teacher_id", user.id)
+    classSongs?.forEach((cs) => assignedIds.add(cs.song_id))
   }
-  owned: boolean
-  loggedIn: boolean
-}) {
-  return (
-    <div className={`bg-zinc-900 border rounded-xl overflow-hidden flex flex-col transition-colors ${
-      owned ? "border-brand/30 hover:border-brand/60" : "border-zinc-800 hover:border-zinc-700"
-    }`}>
-      {/* Color bar from first part color */}
-      <div
-        className="h-1 w-full"
-        style={{ background: song.parts?.[0]?.color ?? "#873995" }}
-      />
 
-      <div className="p-5 flex flex-col flex-1 gap-3">
-        <div>
-          <h2 className="font-semibold text-zinc-100 text-base leading-tight">{song.title}</h2>
-          <p className="text-zinc-400 text-sm mt-0.5">
-            {song.composer}
-            {song.arranger && <span className="text-zinc-500"> · arr. {song.arranger}</span>}
+  const purchasedIds = new Set<string>()
+
+  return (
+    <div>
+      <div className="border-b border-zinc-800 bg-zinc-900/60">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <h1 className="text-3xl font-bold text-zinc-100 tracking-tight">Song Library</h1>
+          <p className="text-zinc-500 mt-1 text-sm">
+            {songs.length} {songs.length === 1 ? "song" : "songs"} available for practice
           </p>
         </div>
+      </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <Tag>{song.voicing}</Tag>
-          {song.is_acappella && <Tag>A cappella</Tag>}
-          {song.parts?.slice(0, 4).map((p) => (
-            <span
-              key={p.name}
-              className="px-2 py-0.5 rounded-full text-xs font-medium"
-              style={{ background: p.color + "20", color: p.color }}
-            >
-              {p.name.replace("_", " ")}
-            </span>
-          ))}
+      {!!songs.length && (
+        <div className="sticky top-14 z-40 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur">
+          <div className="max-w-7xl mx-auto px-6 flex items-center gap-2 overflow-x-auto py-2.5">
+            {VOICING_CATEGORIES.filter(({ label }) => songs.some((s) => categoryFor(s.voicing) === label)).map(({ label, id, colors }) => (
+              <a
+                key={id}
+                href={`#${id}`}
+                className="flex items-center gap-1.5 shrink-0 text-xs font-medium text-zinc-400 hover:text-zinc-100 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 px-3 py-1.5 rounded-full transition-colors"
+              >
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: `linear-gradient(135deg, ${colors.join(", ")})` }}
+                />
+                {label}
+              </a>
+            ))}
+          </div>
         </div>
+      )}
 
-        <div className="mt-auto pt-2 flex items-center justify-between">
-          <span className="text-zinc-100 font-semibold">
-            ${(song.price / 100).toFixed(2)}
-          </span>
-
-          {owned ? (
-            <Link
-              href={`/songs/${song.id}`}
-              className="bg-brand hover:bg-brand-light text-zinc-900 font-semibold px-4 py-1.5 rounded-lg text-sm transition-colors"
-            >
-              Practice →
-            </Link>
-          ) : loggedIn ? (
-            <button className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-medium px-4 py-1.5 rounded-lg text-sm transition-colors">
-              <Lock size={13} /> Purchase
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-medium px-4 py-1.5 rounded-lg text-sm transition-colors"
-            >
-              <Lock size={13} /> Sign in
-            </Link>
-          )}
-        </div>
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-12">
+        {!songs.length ? (
+          <div className="flex flex-col items-center py-32 gap-4">
+            <div className="w-16 h-16 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+              <Music size={28} className="text-zinc-500" />
+            </div>
+            <div className="text-center">
+              <p className="text-zinc-300 font-medium">No songs available yet</p>
+              <p className="text-zinc-500 text-sm mt-1">Your teacher hasn't assigned any songs to your class.</p>
+            </div>
+          </div>
+        ) : (
+          VOICING_CATEGORIES.filter(({ label }) => songs.some((s) => categoryFor(s.voicing) === label)).map(({ label, id, colors }) => {
+            const sectionSongs = songs.filter((s) => categoryFor(s.voicing) === label)
+            return (
+              <LibrarySection key={label} id={id} label={label} count={sectionSongs.length} colors={colors}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {sectionSongs.map((song) => (
+                    <SongCard
+                      key={song.id}
+                      song={song}
+                      owned={isAdmin || !!studentClassId || assignedIds.has(song.id) || purchasedIds.has(song.id)}
+                      loggedIn={!!user || !!studentClassId}
+                    />
+                  ))}
+                </div>
+              </LibrarySection>
+            )
+          })
+        )}
       </div>
     </div>
-  )
-}
-
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-400">
-      {children}
-    </span>
   )
 }
