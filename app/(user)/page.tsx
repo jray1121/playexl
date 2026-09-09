@@ -108,7 +108,7 @@ export default async function LibraryPage() {
                   {sectionSongs.map((song) => (
                     <SongCard
                       key={song.id}
-                      song={{ ...song, arranger: song.arranger ?? undefined }}
+                      song={{ ...song, arranger: song.arranger ?? undefined, parts: song.parts as { name: string; color: string }[] }}
                       owned={isAdmin || !!studentClassId || assignedIds.has(song.id) || purchasedIds.has(song.id)}
                       loggedIn={!!user || !!studentClassId}
                     />
