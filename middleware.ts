@@ -23,7 +23,8 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user ?? null
   const email = user?.email?.toLowerCase() ?? ""
   const isAdmin = ADMIN_EMAILS.includes(email)
 
