@@ -60,14 +60,16 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
               soloed
                 ? {
                     background: baseColor + "25",
-                    color: baseColor,
-                    borderColor: baseColor + "60",
-                    boxShadow: `0 0 8px ${baseColor}40`,
+                    color: "#ffffff",
+                    borderColor: baseColor,
+                    borderWidth: 2,
+                    boxShadow: `0 0 10px ${baseColor}, 0 0 20px ${baseColor}60`,
+                    textShadow: `0 0 8px ${baseColor}`,
                   }
                 : {
                     background: "transparent",
-                    color: "#e4e4e7",
-                    borderColor: "#71717a",
+                    color: "#71717a",
+                    borderColor: "#3f3f46",
                   }
             }
           >
