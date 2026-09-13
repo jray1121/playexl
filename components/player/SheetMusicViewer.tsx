@@ -140,7 +140,7 @@ export default function SheetMusicViewer({
 
       // Trigger scroll 1.5 seconds before the next line's downbeat.
       // This keeps lead-time constant regardless of tempo.
-      const SCROLL_LEAD_SECONDS = 1.5
+      const SCROLL_LEAD_SECONDS = 1.0
       const targetTime = nextLineDownbeat.timestamp - SCROLL_LEAD_SECONDS
 
       // Find the beat on this line whose timestamp is closest to targetTime
