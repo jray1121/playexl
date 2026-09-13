@@ -132,33 +132,26 @@ export default function SheetMusicViewer({
       const line = lines[i]
       const nextLine = lines[i + 1]
 
-      // Walk backward through this line's measures until we find one with
-      // beat-map data. The very last measure may have no detected beats
-      // (rests, pickup, etc.) — falling back avoids silently dropping the
-      // whole line's trigger, which causes a one-line scroll lag.
-      const measuresOnLineDesc = [...new Set(line.map((p) => p.measure))].sort((a, b) => b - a)
-      let lastBeat: BeatMapEntry | null = null
-      for (const m of measuresOnLineDesc) {
-        const beatsOnMeasure = beatMap.filter((b) => b.measure === m)
-        if (beatsOnMeasure.length) {
-          const timeSig = beatsOnMeasure[0].timeSig
-          const [numStr, denStr] = timeSig.split("/")
-          const numerator = parseInt(numStr)
-          const denominator = parseInt(denStr)
-          // Scroll 2 conducting beats before the barline:
-          //   simple meter (e.g. 3/4, 4/4): trigger on beat (numerator - 2)
-          //   compound meter (e.g. 6/8): trigger on beat 1 (= 2 dotted-quarter pulses of look-ahead)
-          const isCompound = denominator === 8 && numerator % 3 === 0
-          const triggerBeat = isCompound ? 1 : Math.max(1, numerator - 2)
-          const triggerEntry = beatsOnMeasure.find((b) => b.beat === triggerBeat)
-          lastBeat = triggerEntry ?? beatsOnMeasure.reduce((a, b) => (a.beat > b.beat ? a : b))
-          break
-        }
-      }
-      if (!lastBeat) continue
-
-      // First measure of the next line
+      // Find the timestamp of beat 1 of the next line's first measure
       const firstMeasureNextLine = Math.min(...nextLine.map((p) => p.measure))
+      const nextLineDownbeat = beatMap.find((b) => b.measure === firstMeasureNextLine && b.beat === 1)
+        ?? beatMap.find((b) => b.measure === firstMeasureNextLine)
+      if (!nextLineDownbeat) continue
+
+      // Trigger scroll 1.5 seconds before the next line's downbeat.
+      // This keeps lead-time constant regardless of tempo.
+      const SCROLL_LEAD_SECONDS = 1.5
+      const targetTime = nextLineDownbeat.timestamp - SCROLL_LEAD_SECONDS
+
+      // Find the beat on this line whose timestamp is closest to targetTime
+      // (but not past the downbeat itself)
+      const measuresOnLine = [...new Set(line.map((p) => p.measure))]
+      const beatsOnLine = beatMap.filter((b) => measuresOnLine.includes(b.measure) && b.timestamp < nextLineDownbeat.timestamp)
+      if (!beatsOnLine.length) continue
+
+      const lastBeat = beatsOnLine.reduce((best, b) =>
+        Math.abs(b.timestamp - targetTime) < Math.abs(best.timestamp - targetTime) ? b : best
+      )
 
       triggers.push({
         triggerTimestamp: lastBeat.timestamp,
