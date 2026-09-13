@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
-import { Play, Pause, SkipBack } from "lucide-react"
+import { Play, Pause, SkipBack, Download } from "lucide-react"
 import type { BeatMapEntry, MeasurePosition, SongPart } from "@/types"
 import { buildCredits } from "@/lib/credits"
 import { timestampToBeat, measureToTimestamp } from "@/lib/beatmap"
@@ -95,6 +95,11 @@ export default function Player({ song }: Props) {
   const [seekMeasure, setSeekMeasure] = useState<number | null>(null)
   const [masterVolume, setMasterVolume] = useState(1.0)
   const [autoScroll, setAutoScroll] = useState(true)
+  const [exportMode, setExportMode] = useState<"instant" | "live">("instant")
+  const [exporting, setExporting] = useState(false)
+  const [liveRecording, setLiveRecording] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordedChunksRef = useRef<Blob[]>([])
 
   const beatMap = song.beat_map ?? []
 
@@ -318,6 +323,124 @@ export default function Player({ song }: Props) {
     }
   }
 
+  // ── Export helpers ────────────────────────────────────────────────────────────
+
+  async function exportInstantMP3() {
+    const buffers = trackAudioRef.current
+    if (!buffers.length) return
+    setExporting(true)
+    try {
+      const sampleRate = audioCtxRef.current?.sampleRate ?? 44100
+      const totalDuration = duration
+      const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * totalDuration), sampleRate)
+
+      const anySoloed = trackUIs.some((t) => t.soloed && t.part.name !== "click")
+
+      buffers.forEach((audio, i) => {
+        if (!audio?.buffer) return
+        const ui = trackUIs[i]
+        const isClick = ui.part.name === "click"
+        const isPiano = ui.part.name === "piano"
+        const isFullMix = ui.part.name === "full_mix"
+        let shouldHear: boolean
+        if (isClick) shouldHear = false // never export click track
+        else if (isPiano || isFullMix) shouldHear = true
+        else shouldHear = anySoloed ? ui.soloed : false
+        if (!shouldHear) return
+
+        const normGain = normGainsRef.current[i] ?? 1
+        const gainNode = offlineCtx.createGain()
+        gainNode.gain.value = ui.volume * normGain * masterVolume
+        gainNode.connect(offlineCtx.destination)
+
+        const source = offlineCtx.createBufferSource()
+        source.buffer = audio.buffer
+        source.connect(gainNode)
+        source.start(0)
+      })
+
+      const rendered = await offlineCtx.startRendering()
+
+      // Encode to MP3 using lamejs loaded via script tag
+      // @ts-ignore
+      const lame = (window as any).lamejs
+      if (!lame) throw new Error("lamejs not loaded")
+
+      const mp3enc = new lame.Mp3Encoder(2, sampleRate, 128)
+      const left = rendered.getChannelData(0)
+      const right = rendered.numberOfChannels > 1 ? rendered.getChannelData(1) : left
+
+      const CHUNK = 1152
+      const mp3Data: Uint8Array[] = []
+      for (let i = 0; i < left.length; i += CHUNK) {
+        const l = toInt16(left.slice(i, i + CHUNK))
+        const r = toInt16(right.slice(i, i + CHUNK))
+        const chunk = mp3enc.encodeBuffer(l, r)
+        if (chunk.length) mp3Data.push(chunk)
+      }
+      const end = mp3enc.flush()
+      if (end.length) mp3Data.push(end)
+
+      const blob = new Blob(mp3Data.map((d) => d.buffer as ArrayBuffer), { type: "audio/mp3" })
+      triggerDownload(blob, `${song.title}.mp3`)
+    } catch (err) {
+      console.error("Export failed:", err)
+    }
+    setExporting(false)
+  }
+
+  function toInt16(float32: Float32Array): Int16Array {
+    const int16 = new Int16Array(float32.length)
+    for (let i = 0; i < float32.length; i++) {
+      const s = Math.max(-1, Math.min(1, float32[i]))
+      int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff
+    }
+    return int16
+  }
+
+  function triggerDownload(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = filename
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 10000)
+  }
+
+  function startLiveRecording() {
+    const ctx = audioCtxRef.current
+    if (!ctx) return
+    const dest = ctx.createMediaStreamDestination()
+    // Connect master output to recorder destination too
+    masterGainRef.current?.connect(dest)
+
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : "audio/webm"
+    const recorder = new MediaRecorder(dest.stream, { mimeType })
+    recordedChunksRef.current = []
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunksRef.current.push(e.data)
+    }
+    recorder.onstop = () => {
+      masterGainRef.current?.disconnect(dest)
+      const blob = new Blob(recordedChunksRef.current, { type: mimeType })
+      triggerDownload(blob, `${song.title}.webm`)
+      setLiveRecording(false)
+    }
+    recorder.start()
+    mediaRecorderRef.current = recorder
+    setLiveRecording(true)
+    // Start playback from beginning
+    stop()
+    setTimeout(() => startPlayback(0), 50)
+  }
+
+  function stopLiveRecording() {
+    mediaRecorderRef.current?.stop()
+    pause()
+  }
+
   // ── Master volume ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (masterGainRef.current) masterGainRef.current.gain.value = masterVolume
@@ -381,6 +504,8 @@ export default function Player({ song }: Props) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-56px)]">
+      {/* lamejs for client-side MP3 encoding */}
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js" async />
       <div className="flex flex-1 min-h-0">
 
         {/* ── Left control panel ─────────────────────────────────────────────── */}
@@ -519,7 +644,7 @@ export default function Player({ song }: Props) {
           </div>
 
           {/* Zoom */}
-          <div className="px-4 py-3 shrink-0 flex items-center gap-2">
+          <div className="px-4 py-3 border-b border-zinc-800 shrink-0 flex items-center gap-2">
             <span className="text-[11px] text-zinc-500 shrink-0">Zoom</span>
             <button
               onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
@@ -530,6 +655,60 @@ export default function Player({ song }: Props) {
               onClick={() => setZoom((z) => Math.min(2.0, Math.round((z + 0.1) * 10) / 10))}
               className="w-6 h-6 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-lg leading-none transition-colors"
             >+</button>
+          </div>
+
+          {/* Export */}
+          <div className="px-4 py-3 shrink-0 flex flex-col gap-2">
+            <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Export Mix</p>
+
+            {/* Mode toggle */}
+            <div className="flex rounded-lg overflow-hidden border border-zinc-700">
+              <button
+                onClick={() => setExportMode("instant")}
+                className="flex-1 py-1.5 text-[11px] font-bold transition-colors"
+                style={exportMode === "instant"
+                  ? { background: voicingBaseColor, color: "#000" }
+                  : { background: "transparent", color: "#71717a" }}
+              >Instant</button>
+              <button
+                onClick={() => setExportMode("live")}
+                className="flex-1 py-1.5 text-[11px] font-bold transition-colors border-l border-zinc-700"
+                style={exportMode === "live"
+                  ? { background: voicingBaseColor, color: "#000" }
+                  : { background: "transparent", color: "#71717a" }}
+              >Live</button>
+            </div>
+
+            <p className="text-[10px] text-zinc-500 leading-snug">
+              {exportMode === "instant"
+                ? "Exports MP3 at current fader levels instantly."
+                : "Records in real-time so you can adjust faders. Saves as WAV."}
+            </p>
+
+            {exportMode === "instant" ? (
+              <button
+                onClick={exportInstantMP3}
+                disabled={exporting || !loaded}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all disabled:opacity-40"
+                style={{ background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }}
+              >
+                <Download size={13} />
+                {exporting ? "Exporting…" : "Export MP3"}
+              </button>
+            ) : (
+              <button
+                onClick={liveRecording ? stopLiveRecording : startLiveRecording}
+                disabled={!loaded}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all disabled:opacity-40"
+                style={liveRecording
+                  ? { background: "#ef444422", borderColor: "#ef4444", color: "#ef4444", boxShadow: "0 0 8px #ef444440" }
+                  : { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }}
+              >
+                <span className={`w-2 h-2 rounded-full ${liveRecording ? "animate-pulse" : ""}`}
+                  style={{ background: liveRecording ? "#ef4444" : voicingBaseColor }} />
+                {liveRecording ? "Stop & Save WAV" : "Record Live"}
+              </button>
+            )}
           </div>
         </div>
 
