@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
+import { Play, Pause, SkipBack } from "lucide-react"
 import type { BeatMapEntry, MeasurePosition, SongPart } from "@/types"
 import { buildCredits } from "@/lib/credits"
 import { timestampToBeat, measureToTimestamp } from "@/lib/beatmap"
@@ -291,6 +292,13 @@ export default function Player({ song }: Props) {
     else startPlayback(offsetRef.current)
   }
 
+  function stop() {
+    pause()
+    offsetRef.current = 0
+    setCurrentTime(0)
+    if (beatMap.length) setCurrentBeat(timestampToBeat(beatMap, 0))
+  }
+
   function seek(seconds: number) {
     const wasPlaying = playing
     if (playing) pause()
@@ -373,92 +381,179 @@ export default function Player({ song }: Props) {
 
   return (
     <div className="flex flex-col h-[calc(100vh-56px)]">
-      {/* Main area: PDF (with its own banner) + Mixer.
-          overflow-visible so the song-info popover isn't clipped — the PDF
-          viewer's own inner wrapper already handles its scroll containment.
-          min-h-0 is required alongside overflow-visible: flex items with
-          visible overflow get an automatic min-height based on content size,
-          which would otherwise inflate this row beyond the viewport. */}
-      <div className="flex flex-1 overflow-visible min-h-0">
-        {/* Left column: title banner + PDF viewer. Same overflow-visible +
-            min-h-0 pairing as above, for the same reason. */}
-        <div className="flex-1 flex flex-col overflow-visible min-h-0">
-          {/* Song info banner — title + small voicing line, full width.
-              min-h accounts for the title's max font size (44px, leading-snug
-              ≈ 68.5px with padding) plus the slim voicing row below it. */}
-          <div className="relative z-30 w-full min-h-20 px-5 bg-zinc-900 shrink-0 flex flex-col items-center justify-center py-1">
-            {/* Info icon + label — anchored to the left edge, absolutely positioned
-                so it never competes with the title for space or affects centering. */}
-            <div className="group absolute left-5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-              <button
-                className="w-5 h-5 rounded-full border border-zinc-600 text-zinc-500 group-hover:text-zinc-200 group-hover:border-zinc-400 flex items-center justify-center text-[11px] font-semibold transition-colors focus:outline-none shrink-0"
-                aria-label="Writer credits"
-              >
-                i
-              </button>
-              <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors whitespace-nowrap">
-                Writer Info
-              </span>
-              <div className="absolute top-full mt-2 left-0 z-20 w-64 bg-zinc-900/95 backdrop-blur border border-zinc-700 rounded-lg px-3 py-2.5 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-opacity text-center">
-                {creditLines.map((line) => (
-                  <p key={line} className="font-display text-zinc-300 text-xs leading-snug">
-                    {line}
-                  </p>
-                ))}
-              </div>
-            </div>
+      <div className="flex flex-1 min-h-0">
 
-            <div ref={titleRef} className="max-w-full overflow-hidden px-3">
-              <h1
-                className="font-display font-bold text-zinc-100 tracking-tight leading-snug whitespace-nowrap text-center"
-                style={{ fontSize: titleFontSize }}
-              >
+        {/* ── Left control panel ─────────────────────────────────────────────── */}
+        <div className="w-64 border-r border-zinc-800 bg-zinc-950 flex flex-col shrink-0">
+
+          {/* Song title + voicing */}
+          <div className="px-4 pt-4 pb-3 border-b border-zinc-800 shrink-0">
+            <div ref={titleRef} className="w-full overflow-hidden mb-0.5">
+              <h1 className="font-display font-bold text-zinc-100 tracking-tight leading-snug text-lg">
                 {song.title}
               </h1>
             </div>
-
-            {/* Voicing — small, centered, directly under the title */}
-            <p className="font-display text-zinc-300 text-xs font-medium leading-none -mt-0.5">
-              {song.voicing} Voices{song.is_acappella ? " · A Cappella" : " · with Piano Accompaniment"}
+            <p className="text-zinc-500 text-[11px] font-medium">
+              {song.voicing}{song.is_acappella ? " · A Cappella" : " · w/ Piano"}
             </p>
           </div>
 
-          <div
-            className="flex-1 overflow-hidden relative"
-            style={{
-              background:
-                `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(to bottom, #18181b 0%, #18181b 10%, ${voicingColors.join(", ")})`,
-            }}
-          >
-            {/* Zoom controls */}
-            <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2 bg-zinc-900/90 backdrop-blur border border-zinc-700 rounded-lg px-3 py-1.5 shadow-lg">
+          {/* Writer info */}
+          <div className="px-4 py-3 border-b border-zinc-800 shrink-0">
+            <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Writer Info</p>
+            {creditLines.map((line) => (
+              <p key={line} className="font-display text-zinc-400 text-xs leading-snug">{line}</p>
+            ))}
+          </div>
+
+          {/* Play controls */}
+          <div className="px-4 py-4 border-b border-zinc-800 shrink-0 flex flex-col gap-4">
+
+            {/* Transport buttons */}
+            <div className="flex items-center gap-2">
+              {/* Play */}
               <button
-                onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
-                className="w-6 h-6 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-lg leading-none transition-colors"
-              >−</button>
-              <span className="text-xs text-zinc-400 w-9 text-center tabular-nums">
-                {Math.round(zoom * 100)}%
-              </span>
+                onClick={() => { if (!playing) startPlayback(offsetRef.current) }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+                style={playing
+                  ? { background: voicingBaseColor, borderColor: voicingBaseColor, color: "#000" }
+                  : { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor, boxShadow: `0 0 8px ${voicingBaseColor}40` }
+                }
+              >
+                <Play size={13} className={playing ? "text-black" : ""} style={{ fill: "currentColor" }} />
+                Play
+              </button>
+              {/* Pause */}
               <button
-                onClick={() => setZoom((z) => Math.min(2.0, Math.round((z + 0.1) * 10) / 10))}
-                className="w-6 h-6 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-lg leading-none transition-colors"
-              >+</button>
+                onClick={() => { if (playing) pause(); else if (currentTime > 0) startPlayback(offsetRef.current) }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+                style={!playing && currentTime > 0
+                  ? { background: "#f59e0b22", borderColor: "#f59e0b", color: "#f59e0b", boxShadow: "0 0 8px #f59e0b40" }
+                  : { background: "transparent", borderColor: "#3f3f46", color: "#71717a" }
+                }
+              >
+                <Pause size={13} style={{ fill: "currentColor" }} />
+                Pause
+              </button>
+              {/* Stop */}
+              <button
+                onClick={stop}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+                style={{ background: "transparent", borderColor: "#3f3f46", color: "#71717a" }}
+              >
+                <span className="w-2.5 h-2.5 rounded-sm bg-current" />
+                Stop
+              </button>
             </div>
-            <SheetMusicViewer
-              url={song.sheet_music_url}
-              currentTime={currentTime}
-              playing={playing}
-              beatMap={beatMap}
-              measurePositions={song.measure_positions}
-              zoom={zoom}
-              seekMeasure={seekMeasure}
-              autoScroll={autoScroll}
-              onAutoScrollChange={setAutoScroll}
-            />
+
+            {/* Bar : Beat */}
+            {beatMap.length > 0 && (
+              <div className="flex items-stretch gap-0 bg-zinc-900 border border-zinc-700 rounded-lg overflow-hidden w-full">
+                <div className="flex-1 flex flex-col items-center justify-center py-2">
+                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Bar</p>
+                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
+                    {currentBeat ? String(currentBeat.measure).padStart(2, "0") : "—"}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center px-1 text-2xl font-black text-zinc-600">:</div>
+                <div className="flex-1 flex flex-col items-center justify-center py-2">
+                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Beat</p>
+                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
+                    {currentBeat ? currentBeat.beat : "—"}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Go to bar */}
+            {beatMap.length > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500 shrink-0">Go to bar</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={measureInput}
+                  onChange={(e) => setMeasureInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const m = parseInt(measureInput)
+                      if (!isNaN(m) && m > 0) jumpToMeasure(m)
+                    }
+                  }}
+                  placeholder="1"
+                  className="w-14 bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1 text-sm text-zinc-100 focus:outline-none focus:border-brand tabular-nums text-center"
+                />
+                <button
+                  onClick={() => { const m = parseInt(measureInput); if (!isNaN(m) && m > 0) jumpToMeasure(m) }}
+                  className="flex-1 py-1 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+                  style={{ background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }}
+                >Go</button>
+              </div>
+            )}
+          </div>
+
+          {/* Click + Auto-scroll — matching toggle style */}
+          <div className="px-4 py-3 border-b border-zinc-800 shrink-0 flex flex-col gap-2">
+            {isVoctave && (
+              <button
+                onClick={() => setClickOn((v) => !v)}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+                style={clickOn
+                  ? { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor, boxShadow: `0 0 8px ${voicingBaseColor}40` }
+                  : { background: "transparent", borderColor: "#3f3f46", color: "#71717a" }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ background: clickOn ? voicingBaseColor : "#52525b" }} />
+                Click {clickOn ? "On" : "Off"}
+              </button>
+            )}
+            <button
+              onClick={() => setAutoScroll((v) => !v)}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+              style={autoScroll
+                ? { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor, boxShadow: `0 0 8px ${voicingBaseColor}40` }
+                : { background: "transparent", borderColor: "#3f3f46", color: "#71717a" }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ background: autoScroll ? voicingBaseColor : "#52525b" }} />
+              Auto-scroll {autoScroll ? "On" : "Off"}
+            </button>
+          </div>
+
+          {/* Zoom */}
+          <div className="px-4 py-3 shrink-0 flex items-center gap-2">
+            <span className="text-[11px] text-zinc-500 shrink-0">Zoom</span>
+            <button
+              onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
+              className="w-6 h-6 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-lg leading-none transition-colors"
+            >−</button>
+            <span className="text-xs text-zinc-400 w-9 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+            <button
+              onClick={() => setZoom((z) => Math.min(2.0, Math.round((z + 0.1) * 10) / 10))}
+              className="w-6 h-6 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 flex items-center justify-center text-lg leading-none transition-colors"
+            >+</button>
           </div>
         </div>
 
-        <div className="w-72 border-l border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col shrink-0">
+        {/* ── PDF viewer ────────────────────────────────────────────────────────── */}
+        <div
+          className="flex-1 overflow-hidden relative min-h-0"
+          style={{
+            background: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(to bottom, #18181b 0%, #18181b 10%, ${voicingColors.join(", ")})`,
+          }}
+        >
+          <SheetMusicViewer
+            url={song.sheet_music_url}
+            currentTime={currentTime}
+            playing={playing}
+            beatMap={beatMap}
+            measurePositions={song.measure_positions}
+            zoom={zoom}
+            seekMeasure={seekMeasure}
+            autoScroll={autoScroll}
+          />
+        </div>
+
+        {/* ── Mixer (right panel) ───────────────────────────────────────────────── */}
+        <div className="w-64 border-l border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col shrink-0">
           {/* Mixer header */}
           <div className="pl-4 pr-5 pt-2.5 pb-2 border-b border-zinc-800 shrink-0">
             <div className="flex items-center justify-between mb-2">
@@ -466,114 +561,56 @@ export default function Player({ song }: Props) {
               <button
                 onClick={resetMixer}
                 className="text-[10px] font-semibold text-zinc-500 hover:text-zinc-200 bg-zinc-800 hover:bg-zinc-700 px-2 py-0.5 rounded transition-colors"
-                title="Reset all faders to default"
-              >
-                Reset
-              </button>
+              >Reset</button>
             </div>
-            {/* Master volume — same label/fader/number layout as the track strips below */}
             <div className="space-y-1.5">
               <span className="text-[11px] font-medium text-zinc-500">Master</span>
               <div className="flex items-center gap-2.5">
                 <div className="relative flex-1 h-5 flex items-center">
                   <div className="absolute inset-x-0 h-1 rounded-full bg-zinc-700/80" />
-                  <div
-                    className="absolute h-1 rounded-full bg-brand left-0"
-                    style={{ width: `${(masterVolume / 2) * 100}%`, opacity: 0.75 }}
-                  />
-                  <input
-                    type="range"
-                    min={0}
-                    max={2}
-                    step={0.01}
-                    value={masterVolume}
+                  <div className="absolute h-1 rounded-full bg-brand left-0" style={{ width: `${(masterVolume / 2) * 100}%`, opacity: 0.75 }} />
+                  <input type="range" min={0} max={2} step={0.01} value={masterVolume}
                     onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
-                    className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                    style={{ zIndex: 10 }}
-                  />
-                  <div
-                    className="absolute w-3.5 h-3.5 rounded-full bg-zinc-900 border-2 border-brand pointer-events-none"
-                    style={{
-                      left: `calc(${(masterVolume / 2) * 100}% - 7px)`,
-                      boxShadow: "0 0 6px rgba(135,57,149,0.5)",
-                    }}
-                  />
+                    className="absolute inset-0 w-full opacity-0 cursor-pointer" style={{ zIndex: 10 }} />
+                  <div className="absolute w-3.5 h-3.5 rounded-full bg-zinc-900 border-2 border-brand pointer-events-none"
+                    style={{ left: `calc(${(masterVolume / 2) * 100}% - 7px)`, boxShadow: "0 0 6px rgba(135,57,149,0.5)" }} />
                 </div>
                 <span className="text-[11px] font-mono w-8 text-right tabular-nums text-brand shrink-0">
-                  {/* Display only — remapped so default (unity gain) shows 50 and
-                      max (2x gain) shows 100. Underlying masterVolume range/behavior
-                      is unchanged; this just keeps the number from reading above 100. */}
                   {Math.round(masterVolume * 50)}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Full Mix — pinned above the scroll area */}
+          {/* Full Mix pinned */}
           {trackUIs.filter((t) => t.part.name === "full_mix").map((track) => {
             const i = trackUIs.findIndex((t) => t.part.name === "full_mix")
             return (
               <div key="full_mix" className="shrink-0 border-b border-zinc-800" style={{ minHeight: "52px" }}>
-                <ChannelStrip
-                  track={track}
-                  index={0}
-                  baseColor={voicingBaseColor}
-                  onVolumeChange={(v) => setVolume(i, v)}
-                  onSoloToggle={() => {}}
-                  hideSolo
-                />
+                <ChannelStrip track={track} index={0} baseColor={voicingBaseColor}
+                  onVolumeChange={(v) => setVolume(i, v)} onSoloToggle={() => {}} hideSolo />
               </div>
             )
           })}
 
-          {/* Channel strips — scrollable so any number of tracks fit */}
+          {/* Scrollable strips */}
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
             {trackUIs
               .filter((track) => track.part.name !== "click" && track.part.name !== "full_mix")
               .map((track, rowIndex) => {
                 const i = trackUIs.findIndex((t) => t.part.name === track.part.name)
                 return (
-                  <div
-                    key={track.part.name}
-                    className="shrink-0"
-                    style={{ height: `${100 / Math.min(trackUIs.length, 8)}%`, minHeight: "52px" }}
-                  >
-                    <ChannelStrip
-                      track={track}
-                      index={rowIndex}
-                      baseColor={stripColor(track.part.name)}
-                      onVolumeChange={(v) => setVolume(i, v)}
-                      onSoloToggle={() => toggleSolo(i)}
-                    />
+                  <div key={track.part.name} className="shrink-0" style={{ height: `${100 / Math.min(trackUIs.length, 8)}%`, minHeight: "52px" }}>
+                    <ChannelStrip track={track} index={rowIndex} baseColor={stripColor(track.part.name)}
+                      onVolumeChange={(v) => setVolume(i, v)} onSoloToggle={() => toggleSolo(i)} />
                   </div>
                 )
               })}
-            {/* Click track row — Voctave only */}
-            {isVoctave && (
-              <div
-                className="shrink-0 flex items-center px-3 gap-3"
-                style={{ minHeight: "52px", borderTop: "1px solid rgb(39,39,42)" }}
-              >
-                <button
-                  onClick={() => setClickOn((v) => !v)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
-                  style={clickOn
-                    ? { borderColor: VOCTAVE_MEMBER_COLORS.click, color: VOCTAVE_MEMBER_COLORS.click, background: `${VOCTAVE_MEMBER_COLORS.click}22` }
-                    : { borderColor: "#52525b", color: "#71717a" }}
-                >
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ background: clickOn ? VOCTAVE_MEMBER_COLORS.click : "#52525b" }}
-                  />
-                  Click {clickOn ? "On" : "Off"}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Transport */}
+      {/* ── Seek bar (bottom) ─────────────────────────────────────────────────── */}
       <Transport
         playing={playing}
         currentTime={currentTime}
