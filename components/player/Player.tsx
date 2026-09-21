@@ -554,23 +554,18 @@ export default function Player({ song }: Props) {
         {/* ── Left control panel ─────────────────────────────────────────────── */}
         <div className="w-64 border-r-2 border-zinc-300 bg-zinc-200 flex flex-col shrink-0">
 
-          {/* Song title + voicing */}
+          {/* Song title + voicing + credits */}
           <div className="px-4 pt-4 pb-3 border-b border-zinc-200 shrink-0">
-            <div ref={titleRef} className="w-full overflow-hidden mb-0.5">
-              <h1 className="font-display font-bold text-zinc-900 tracking-tight leading-snug text-lg">
+            <div ref={titleRef} className="w-full overflow-hidden mb-1">
+              <h1 className="font-display font-bold text-zinc-900 tracking-tight leading-snug text-2xl">
                 {song.title}
               </h1>
             </div>
-            <p className="text-zinc-500 text-[11px] font-medium">
+            <p className="text-zinc-500 text-xs font-medium mb-2">
               {song.voicing}{song.is_acappella ? " · A Cappella" : " · w/ Piano"}
             </p>
-          </div>
-
-          {/* Writer info */}
-          <div className="px-4 py-3 border-b border-zinc-200 shrink-0">
-            <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5">Writer Info</p>
             {creditLines.map((line) => (
-              <p key={line} className="font-display text-zinc-600 text-xs leading-snug">{line}</p>
+              <p key={line} className="font-display text-zinc-600 text-sm leading-snug">{line}</p>
             ))}
           </div>
 
