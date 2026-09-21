@@ -735,7 +735,7 @@ export default function Player({ song }: Props) {
           />
 
           {/* Floating transport bar — bottom center, overlaps sheet music */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-3 z-20 flex items-center gap-1 px-3 py-2 rounded-2xl shadow-lg w-80"
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-3 z-20 flex items-center gap-2 px-4 py-2 rounded-2xl shadow-lg" style={{ width: "480px" }}
             style={{
               background: "rgba(255,255,255,0.72)",
               backdropFilter: "blur(12px)",
