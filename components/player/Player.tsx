@@ -530,7 +530,7 @@ export default function Player({ song }: Props) {
     }
     return voicingBaseColor
   }
-  const voicingColors = generatePartColors(voicingBaseColor, 2).map((c) => `${c}18`)
+  const voicingColors = [voicingBaseColor]
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -759,7 +759,7 @@ export default function Player({ song }: Props) {
         <div
           className="flex-1 overflow-hidden relative min-h-0"
           style={{
-            background: `linear-gradient(to bottom, #f4f4f5 0%, #f4f4f5 10%, ${voicingColors.join(", ")})`,
+            background: `#f4f4f5`,
           }}
         >
           <SheetMusicViewer
