@@ -569,58 +569,9 @@ export default function Player({ song }: Props) {
             ))}
           </div>
 
-          {/* Play controls */}
-          <div className="px-4 py-4 border-b border-zinc-200 shrink-0 flex flex-col gap-4">
-
-            {/* Bar : Beat */}
-            {beatMap.length > 0 && (
-              <div className="flex items-stretch gap-0 bg-white border border-zinc-200 rounded-lg overflow-hidden w-full">
-                <div className="flex-1 flex flex-col items-center justify-center py-2">
-                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Bar</p>
-                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
-                    {currentBeat ? String(currentBeat.measure).padStart(2, "0") : "—"}
-                  </p>
-                </div>
-                <div className="flex items-center justify-center px-1 text-2xl font-black text-zinc-600">:</div>
-                <div className="flex-1 flex flex-col items-center justify-center py-2">
-                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Beat</p>
-                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
-                    {currentBeat ? currentBeat.beat : "—"}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Go to bar */}
-            {beatMap.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-500 shrink-0">Go to bar</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={measureInput}
-                  onChange={(e) => setMeasureInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const m = parseInt(measureInput)
-                      if (!isNaN(m) && m > 0) jumpToMeasure(m)
-                    }
-                  }}
-                  placeholder="1"
-                  className="w-14 bg-white border border-zinc-300 rounded-lg px-2 py-1 text-sm text-zinc-800 focus:outline-none focus:border-brand tabular-nums text-center"
-                />
-                <button
-                  onClick={() => { const m = parseInt(measureInput); if (!isNaN(m) && m > 0) jumpToMeasure(m) }}
-                  className="flex-1 py-1 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
-                  style={{ background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }}
-                >Go</button>
-              </div>
-            )}
-          </div>
-
-          {/* Click + Auto-scroll — matching toggle style */}
-          <div className="px-4 py-3 border-b border-zinc-200 shrink-0 flex flex-col gap-2">
-            {isVoctave && (
+          {/* Click toggle — stays near top for Voctave */}
+          {isVoctave && (
+            <div className="px-4 pt-3 shrink-0">
               <button
                 onClick={() => setClickOn((v) => !v)}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
@@ -631,35 +582,14 @@ export default function Player({ song }: Props) {
                 <span className="w-2 h-2 rounded-full" style={{ background: clickOn ? voicingBaseColor : "#52525b" }} />
                 Click {clickOn ? "On" : "Off"}
               </button>
-            )}
-            <button
-              onClick={() => setAutoScroll((v) => !v)}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
-              style={autoScroll
-                ? { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor, boxShadow: `0 0 8px ${voicingBaseColor}40` }
-                : { background: "transparent", borderColor: "#3f3f46", color: "#71717a" }}
-            >
-              <span className="w-2 h-2 rounded-full" style={{ background: autoScroll ? voicingBaseColor : "#52525b" }} />
-              Auto-scroll {autoScroll ? "On" : "Off"}
-            </button>
-          </div>
+            </div>
+          )}
 
-          {/* Zoom */}
-          <div className="px-4 py-3 border-b border-zinc-200 shrink-0 flex items-center gap-2">
-            <span className="text-[11px] text-zinc-500 shrink-0">Zoom</span>
-            <button
-              onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
-              className="w-6 h-6 rounded bg-zinc-200 hover:bg-zinc-300 text-zinc-700 flex items-center justify-center text-lg leading-none transition-colors"
-            >−</button>
-            <span className="text-xs text-zinc-600 w-9 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-            <button
-              onClick={() => setZoom((z) => Math.min(2.0, Math.round((z + 0.1) * 10) / 10))}
-              className="w-6 h-6 rounded bg-zinc-200 hover:bg-zinc-300 text-zinc-700 flex items-center justify-center text-lg leading-none transition-colors"
-            >+</button>
-          </div>
+          {/* Spacer — pushes bottom controls down */}
+          <div className="flex-1" />
 
           {/* Export — always shown for Voctave, opt-in for other voicings */}
-          {(isVoctave || song.allow_export) && <div className="px-4 py-3 shrink-0 flex flex-col gap-2">
+          {(isVoctave || song.allow_export) && <div className="px-4 py-3 border-t border-zinc-200 shrink-0 flex flex-col gap-2">
             <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Export Mix</p>
 
             {/* Mode toggle */}
@@ -711,6 +641,79 @@ export default function Player({ song }: Props) {
               </button>
             )}
           </div>}
+
+          {/* Bar : Beat */}
+          {beatMap.length > 0 && (
+            <div className="px-4 pb-2 shrink-0">
+              <div className="flex items-stretch gap-0 bg-white border border-zinc-200 rounded-lg overflow-hidden w-full">
+                <div className="flex-1 flex flex-col items-center justify-center py-2">
+                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Bar</p>
+                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
+                    {currentBeat ? String(currentBeat.measure).padStart(2, "0") : "—"}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center px-1 text-2xl font-black text-zinc-400">:</div>
+                <div className="flex-1 flex flex-col items-center justify-center py-2">
+                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Beat</p>
+                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
+                    {currentBeat ? currentBeat.beat : "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Go to bar */}
+          {beatMap.length > 0 && (
+            <div className="px-4 pb-2 shrink-0 flex items-center gap-2">
+              <span className="text-xs text-zinc-500 shrink-0">Go to bar</span>
+              <input
+                type="number"
+                min={1}
+                value={measureInput}
+                onChange={(e) => setMeasureInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const m = parseInt(measureInput)
+                    if (!isNaN(m) && m > 0) jumpToMeasure(m)
+                  }
+                }}
+                placeholder="1"
+                className="w-14 bg-white border border-zinc-300 rounded-lg px-2 py-1 text-sm text-zinc-800 focus:outline-none focus:border-brand tabular-nums text-center"
+              />
+              <button
+                onClick={() => { const m = parseInt(measureInput); if (!isNaN(m) && m > 0) jumpToMeasure(m) }}
+                className="flex-1 py-1 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+                style={{ background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }}
+              >Go</button>
+            </div>
+          )}
+
+          {/* Auto-scroll + Zoom — pinned to bottom */}
+          <div className="px-4 pb-3 shrink-0 flex flex-col gap-2">
+            <button
+              onClick={() => setAutoScroll((v) => !v)}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+              style={autoScroll
+                ? { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor, boxShadow: `0 0 8px ${voicingBaseColor}40` }
+                : { background: "transparent", borderColor: "#3f3f46", color: "#71717a" }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ background: autoScroll ? voicingBaseColor : "#52525b" }} />
+              Auto-scroll {autoScroll ? "On" : "Off"}
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-zinc-500 shrink-0">Zoom</span>
+              <button
+                onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
+                className="w-6 h-6 rounded bg-zinc-200 hover:bg-zinc-300 text-zinc-700 flex items-center justify-center text-lg leading-none transition-colors"
+              >−</button>
+              <span className="text-xs text-zinc-600 w-9 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+              <button
+                onClick={() => setZoom((z) => Math.min(2.0, Math.round((z + 0.1) * 10) / 10))}
+                className="w-6 h-6 rounded bg-zinc-200 hover:bg-zinc-300 text-zinc-700 flex items-center justify-center text-lg leading-none transition-colors"
+              >+</button>
+            </div>
+          </div>
         </div>
 
         {/* ── PDF viewer ────────────────────────────────────────────────────────── */}
