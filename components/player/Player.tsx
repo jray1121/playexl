@@ -795,7 +795,7 @@ export default function Player({ song }: Props) {
           {trackUIs.filter((t) => t.part.name === "full_mix").map((track) => {
             const i = trackUIs.findIndex((t) => t.part.name === "full_mix")
             return (
-              <div key="full_mix" className="shrink-0 h-16 border-b border-slate-200">
+              <div key="full_mix" className="shrink-0 h-16 border-b border-slate-300">
                 <ChannelStrip track={track} index={0} baseColor={voicingBaseColor}
                   onVolumeChange={(v) => setVolume(i, v)} onSoloToggle={() => {}} hideSolo />
               </div>
