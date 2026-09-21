@@ -808,7 +808,7 @@ export default function Player({ song }: Props) {
           {trackUIs.filter((t) => t.part.name === "full_mix").map((track) => {
             const i = trackUIs.findIndex((t) => t.part.name === "full_mix")
             return (
-              <div key="full_mix" className="shrink-0 border-b border-zinc-800" style={{ minHeight: "52px" }}>
+              <div key="full_mix" className="shrink-0 h-16 border-b border-zinc-800">
                 <ChannelStrip track={track} index={0} baseColor={voicingBaseColor}
                   onVolumeChange={(v) => setVolume(i, v)} onSoloToggle={() => {}} hideSolo />
               </div>
@@ -822,7 +822,7 @@ export default function Player({ song }: Props) {
               .map((track, rowIndex) => {
                 const i = trackUIs.findIndex((t) => t.part.name === track.part.name)
                 return (
-                  <div key={track.part.name} className="shrink-0" style={{ height: `${100 / Math.min(trackUIs.length, 8)}%`, minHeight: "52px" }}>
+                  <div key={track.part.name} className="shrink-0 h-16">
                     <ChannelStrip track={track} index={rowIndex} baseColor={stripColor(track.part.name)}
                       onVolumeChange={(v) => setVolume(i, v)} onSoloToggle={() => toggleSolo(i)} />
                   </div>
