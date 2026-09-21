@@ -814,24 +814,6 @@ export default function Player({ song }: Props) {
               })}
           </div>
 
-          {/* Master fader — pinned to bottom */}
-          <div className="pl-4 pr-5 py-3 border-t border-zinc-200 shrink-0">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-widest">Master</span>
-              <span className="text-[11px] font-mono tabular-nums text-brand">{Math.round(masterVolume * 50)}</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="relative flex-1 h-5 flex items-center">
-                <div className="absolute inset-x-0 h-1 rounded-full bg-zinc-300" />
-                <div className="absolute h-1 rounded-full bg-brand left-0" style={{ width: `${(masterVolume / 2) * 100}%`, opacity: 0.75 }} />
-                <input type="range" min={0} max={2} step={0.01} value={masterVolume}
-                  onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
-                  className="absolute inset-0 w-full opacity-0 cursor-pointer" style={{ zIndex: 10 }} />
-                <div className="absolute w-3.5 h-3.5 rounded-full bg-white border-2 border-brand pointer-events-none"
-                  style={{ left: `calc(${(masterVolume / 2) * 100}% - 7px)`, boxShadow: "0 0 6px rgba(135,57,149,0.5)" }} />
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
