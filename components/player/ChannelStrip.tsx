@@ -29,8 +29,8 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
 
   return (
     <div
-      className="relative h-full pl-4 pr-5 py-2 flex flex-col gap-1.5 justify-center border-b border-slate-300 transition-colors"
-      style={{ background: `${baseColor}10` }}
+      className="relative h-full pl-4 pr-5 py-2 flex flex-col gap-1.5 justify-center border-b border-slate-300 transition-all duration-200 bg-white"
+      style={soloed ? { background: `${baseColor}18`, boxShadow: `inset 0 0 0 1.5px ${baseColor}60` } : {}}
     >
 
       {/* Part name + solo */}
