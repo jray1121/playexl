@@ -572,43 +572,6 @@ export default function Player({ song }: Props) {
           {/* Play controls */}
           <div className="px-4 py-4 border-b border-zinc-200 shrink-0 flex flex-col gap-4">
 
-            {/* Transport buttons */}
-            <div className="flex items-center gap-2">
-              {/* Play */}
-              <button
-                onClick={() => { if (!playing) startPlayback(offsetRef.current) }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
-                style={playing
-                  ? { background: voicingBaseColor, borderColor: voicingBaseColor, color: "#000" }
-                  : { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor, boxShadow: `0 0 8px ${voicingBaseColor}40` }
-                }
-              >
-                <Play size={13} className={playing ? "text-black" : ""} style={{ fill: "currentColor" }} />
-                Play
-              </button>
-              {/* Pause */}
-              <button
-                onClick={() => { if (playing) pause(); else if (currentTime > 0) startPlayback(offsetRef.current) }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
-                style={!playing && currentTime > 0
-                  ? { background: "#f59e0b22", borderColor: "#f59e0b", color: "#f59e0b", boxShadow: "0 0 8px #f59e0b40" }
-                  : { background: "transparent", borderColor: "#3f3f46", color: "#71717a" }
-                }
-              >
-                <Pause size={13} style={{ fill: "currentColor" }} />
-                Pause
-              </button>
-              {/* Stop */}
-              <button
-                onClick={stop}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
-                style={{ background: "transparent", borderColor: "#3f3f46", color: "#71717a" }}
-              >
-                <span className="w-2.5 h-2.5 rounded-sm bg-current" />
-                Stop
-              </button>
-            </div>
-
             {/* Bar : Beat */}
             {beatMap.length > 0 && (
               <div className="flex items-stretch gap-0 bg-white border border-zinc-200 rounded-lg overflow-hidden w-full">
@@ -767,6 +730,49 @@ export default function Player({ song }: Props) {
             seekMeasure={seekMeasure}
             autoScroll={autoScroll}
           />
+
+          {/* Floating transport bar — bottom center, overlaps sheet music */}
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-3 z-20 flex items-center gap-1 px-3 py-2 rounded-2xl shadow-lg"
+            style={{
+              background: "rgba(255,255,255,0.72)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(0,0,0,0.10)",
+            }}
+          >
+            {/* Play */}
+            <button
+              onClick={() => { if (!playing) startPlayback(offsetRef.current) }}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
+              style={playing
+                ? { background: voicingBaseColor, borderColor: voicingBaseColor, color: "#000" }
+                : { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }
+              }
+            >
+              <Play size={13} style={{ fill: "currentColor" }} />
+              Play
+            </button>
+            {/* Pause */}
+            <button
+              onClick={() => { if (playing) pause(); else if (currentTime > 0) startPlayback(offsetRef.current) }}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
+              style={!playing && currentTime > 0
+                ? { background: "#f59e0b22", borderColor: "#f59e0b", color: "#f59e0b" }
+                : { background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }
+              }
+            >
+              <Pause size={13} style={{ fill: "currentColor" }} />
+              Pause
+            </button>
+            {/* Stop */}
+            <button
+              onClick={stop}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
+              style={{ background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }}
+            >
+              <span className="w-2.5 h-2.5 rounded-sm bg-current" />
+              Stop
+            </button>
+          </div>
         </div>
 
         {/* ── Mixer (right panel) ───────────────────────────────────────────────── */}
