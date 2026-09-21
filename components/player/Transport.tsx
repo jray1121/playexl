@@ -22,7 +22,7 @@ function formatTime(seconds: number) {
 
 export default function Transport({ currentTime, duration, onSeek }: Props) {
   return (
-    <div className="border-t border-zinc-300 bg-zinc-100 shrink-0 px-4 py-2 flex items-center gap-3">
+    <div className="border-t border-zinc-300 bg-zinc-200 shrink-0 px-4 py-2 flex items-center gap-3">
       <span className="text-xs text-zinc-600 tabular-nums w-9 text-right shrink-0">
         {formatTime(currentTime)}
       </span>
