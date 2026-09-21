@@ -30,7 +30,7 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
   return (
     <div
       className="relative h-full pl-4 pr-5 py-2 flex flex-col gap-1.5 justify-center border-b border-slate-300 transition-colors"
-      style={{ background: `linear-gradient(to right, white 40%, ${baseColor}18 100%)` }}
+      style={{ background: `${baseColor}10` }}
     >
 
       {/* Part name + solo */}
