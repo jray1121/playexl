@@ -100,6 +100,9 @@ export default function Player({ song }: Props) {
   const [liveRecording, setLiveRecording] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
+  // Volumes of full_mix/piano before the first solo — restored when all solos cleared
+  const preSoloVolumesRef = useRef<Map<number, number>>(new Map())
+  const inSoloSessionRef = useRef(false)
 
   const beatMap = song.beat_map ?? []
 
@@ -457,10 +460,49 @@ export default function Player({ song }: Props) {
   }
 
   function toggleSolo(index: number) {
-    setTrackUIs((prev) => prev.map((t, i) => i === index ? { ...t, soloed: !t.soloed } : t))
+    setTrackUIs((prev) => {
+      const wasAnySoloed = prev.some((t) => t.soloed && t.part.name !== "click")
+      const clickingTrack = prev[index]
+      const willBeSoloed = !clickingTrack.soloed
+      const willBeAnySoloed = willBeSoloed || prev.some((t, i) => i !== index && t.soloed && t.part.name !== "click")
+
+      // Entering a fresh solo session: save and drop background track volumes
+      if (!wasAnySoloed && willBeAnySoloed && !inSoloSessionRef.current) {
+        inSoloSessionRef.current = true
+        preSoloVolumesRef.current = new Map()
+        const updated = prev.map((t, i) => {
+          if (t.part.name === "full_mix" || t.part.name === "piano") {
+            preSoloVolumesRef.current.set(i, t.volume)
+            return { ...t, volume: 0.5, soloed: i === index ? willBeSoloed : t.soloed }
+          }
+          return i === index ? { ...t, soloed: willBeSoloed } : t
+        })
+        return updated
+      }
+
+      // Clearing the last solo: restore saved volumes and end session
+      if (wasAnySoloed && !willBeAnySoloed) {
+        inSoloSessionRef.current = false
+        const saved = preSoloVolumesRef.current
+        preSoloVolumesRef.current = new Map()
+        return prev.map((t, i) => {
+          const restored = saved.get(i)
+          return {
+            ...t,
+            soloed: i === index ? false : t.soloed,
+            volume: restored !== undefined ? restored : t.volume,
+          }
+        })
+      }
+
+      // Mid-session solo change: just toggle, don't touch volumes
+      return prev.map((t, i) => i === index ? { ...t, soloed: willBeSoloed } : t)
+    })
   }
 
   function resetMixer() {
+    inSoloSessionRef.current = false
+    preSoloVolumesRef.current = new Map()
     setTrackUIs((prev) => prev.map((t) => ({ ...t, volume: 1, muted: false, soloed: false })))
     setMasterVolume(1.0)
   }
