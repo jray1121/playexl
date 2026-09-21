@@ -530,7 +530,7 @@ export default function Player({ song }: Props) {
     }
     return voicingBaseColor
   }
-  const voicingColors = generatePartColors(voicingBaseColor, 2).map((c) => `${c}66`)
+  const voicingColors = generatePartColors(voicingBaseColor, 2).map((c) => `${c}18`)
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
