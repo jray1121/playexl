@@ -32,11 +32,6 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
       className="relative h-full pl-4 pr-5 py-2 flex flex-col gap-1.5 justify-center border-b-2 border-zinc-700 hover:bg-zinc-900/60 transition-colors"
       style={{ backgroundImage: `linear-gradient(to left, ${baseColor}44, transparent 85%)` }}
     >
-      {/* Left color accent bar — uses per-part shade for subtle differentiation */}
-      <div
-        className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full"
-        style={{ background: part.color, opacity: soloed ? 1 : 0.4 }}
-      />
 
       {/* Part name + solo */}
       <div className="flex items-center justify-between">

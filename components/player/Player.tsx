@@ -552,7 +552,7 @@ export default function Player({ song }: Props) {
       <div className="flex flex-1 min-h-0">
 
         {/* ── Left control panel ─────────────────────────────────────────────── */}
-        <div className="w-64 border-r border-zinc-800 bg-zinc-950 flex flex-col shrink-0">
+        <div className="w-64 border-r-2 border-zinc-700 bg-zinc-950 flex flex-col shrink-0">
 
           {/* Song title + voicing */}
           <div className="px-4 pt-4 pb-3 border-b border-zinc-800 shrink-0">
@@ -775,7 +775,7 @@ export default function Player({ song }: Props) {
         </div>
 
         {/* ── Mixer (right panel) ───────────────────────────────────────────────── */}
-        <div className="w-64 border-l border-zinc-800 bg-zinc-950 overflow-hidden flex flex-col shrink-0">
+        <div className="w-64 border-l-2 border-zinc-700 bg-zinc-950 overflow-hidden flex flex-col shrink-0">
           {/* Mixer header */}
           <div className="pl-4 pr-5 pt-2.5 pb-2 border-b border-zinc-800 shrink-0">
             <div className="flex items-center justify-between mb-2">
