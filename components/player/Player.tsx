@@ -735,7 +735,7 @@ export default function Player({ song }: Props) {
           />
 
           {/* Floating transport bar — bottom center, overlaps sheet music */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-3 z-20 flex items-center gap-1 px-3 py-2 rounded-2xl shadow-lg"
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-3 z-20 flex items-center gap-1 px-3 py-2 rounded-2xl shadow-lg w-80"
             style={{
               background: "rgba(255,255,255,0.72)",
               backdropFilter: "blur(12px)",
@@ -745,7 +745,7 @@ export default function Player({ song }: Props) {
             {/* Play */}
             <button
               onClick={() => { if (!playing) startPlayback(offsetRef.current) }}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
               style={playing
                 ? { background: voicingBaseColor, borderColor: voicingBaseColor, color: "#000" }
                 : { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }
@@ -757,7 +757,7 @@ export default function Player({ song }: Props) {
             {/* Pause */}
             <button
               onClick={() => { if (playing) pause(); else if (currentTime > 0) startPlayback(offsetRef.current) }}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
               style={!playing && currentTime > 0
                 ? { background: "#f59e0b22", borderColor: "#f59e0b", color: "#f59e0b" }
                 : { background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }
@@ -769,7 +769,7 @@ export default function Player({ song }: Props) {
             {/* Stop */}
             <button
               onClick={stop}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
               style={{ background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }}
             >
               <span className="w-2.5 h-2.5 rounded-sm bg-current" />
