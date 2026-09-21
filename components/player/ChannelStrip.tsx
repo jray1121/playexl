@@ -29,7 +29,7 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
 
   return (
     <div
-      className="relative h-full pl-4 pr-5 py-2 flex flex-col gap-1.5 justify-center border-b-2 border-zinc-700 hover:bg-zinc-900/60 transition-colors"
+      className="relative h-full pl-4 pr-5 py-2 flex flex-col gap-1.5 justify-center border-b border-zinc-200 hover:bg-zinc-200/60 transition-colors"
       style={{ backgroundImage: `linear-gradient(to left, ${baseColor}44, transparent 85%)` }}
     >
 
@@ -43,7 +43,7 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
               boxShadow: soloed ? `0 0 6px ${baseColor}` : "none",
             }}
           />
-          <span className="text-sm font-semibold text-zinc-200 tracking-wide">
+          <span className="text-sm font-semibold text-zinc-800 tracking-wide">
             {part.label}
           </span>
         </div>
@@ -77,7 +77,7 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
       <div className="flex items-center gap-2.5">
         <div className="relative flex-1 h-5 flex items-center">
           {/* Groove */}
-          <div className="absolute inset-x-0 h-1 rounded-full bg-zinc-700/80" />
+          <div className="absolute inset-x-0 h-1 rounded-full bg-zinc-300" />
           {/* Fill */}
           <div
             className="absolute h-1 rounded-full left-0 transition-none"
@@ -96,7 +96,7 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
           />
           {/* Thumb */}
           <div
-            className="absolute w-3.5 h-3.5 rounded-full bg-zinc-900 border-2 shadow pointer-events-none transition-none"
+            className="absolute w-3.5 h-3.5 rounded-full bg-white border-2 shadow pointer-events-none transition-none"
             style={{
               left: `calc(${volume * 100}% - 7px)`,
               borderColor: baseColor,
