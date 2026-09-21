@@ -28,6 +28,7 @@ export default async function EditSongPage({ params }: { params: Promise<{ id: s
     clickTrackUrl: song.click_track_url,
     beatMap: song.beat_map,
     tempo: song.tempo,
+    allowExport: song.allow_export ?? false,
   }
 
   return (

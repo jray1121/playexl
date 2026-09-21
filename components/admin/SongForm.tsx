@@ -62,6 +62,7 @@ interface Props {
     clickTrackUrl: string
     beatMap: object[]
     tempo: number
+    allowExport: boolean
   }>
 }
 
@@ -87,6 +88,7 @@ export default function SongForm({ initialData }: Props) {
   const [sku, setSku] = useState((initialData as { sku?: string })?.sku ?? "")
   const [published, setPublished] = useState(initialData?.published ?? false)
   const [tempo, setTempo] = useState(initialData?.tempo?.toString() ?? "")
+  const [allowExport, setAllowExport] = useState(initialData?.allowExport ?? false)
 
   // Files
   const [sheetMusicFile, setSheetMusicFile] = useState<File | null>(null)
@@ -277,6 +279,7 @@ export default function SongForm({ initialData }: Props) {
         click_track_url: finalClickUrl || null,
         beat_map: beatMap.length ? beatMap : null,
         time_sig_map: timeSigMap,
+        allow_export: voicing === "Voctave" ? true : allowExport,
         updated_at: new Date().toISOString(),
         ...(isEdit ? {} : { created_at: new Date().toISOString() }),
       }
@@ -321,6 +324,7 @@ export default function SongForm({ initialData }: Props) {
         published: true, tempo: tempo ? parseInt(tempo) : null, parts: finalParts,
         sheet_music_url: finalSheetUrl, click_track_url: finalClickUrl || null,
         beat_map: beatMap.length ? beatMap : null, time_sig_map: timeSigMap,
+        allow_export: voicing === "Voctave" ? true : allowExport,
         updated_at: new Date().toISOString(),
         ...(isEdit ? {} : { created_at: new Date().toISOString() }),
       }
@@ -413,7 +417,7 @@ export default function SongForm({ initialData }: Props) {
             />
           </Field>
         </div>
-        <div className="flex gap-6 mt-2">
+        <div className="flex flex-col gap-3 mt-2">
           <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
             <input
               type="checkbox"
@@ -433,6 +437,17 @@ export default function SongForm({ initialData }: Props) {
             />
             A cappella (no accompaniment track)
           </label>
+          {voicing !== "Voctave" && (
+            <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allowExport}
+                onChange={(e) => setAllowExport(e.target.checked)}
+                className="accent-amber-400 w-4 h-4"
+              />
+              Allow MP3 export for students
+            </label>
+          )}
         </div>
       </Section>
 

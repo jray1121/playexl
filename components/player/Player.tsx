@@ -55,6 +55,7 @@ interface Props {
     measure_positions?: MeasurePosition[]
     time_sig_map: object[]
     tempo?: number
+    allow_export?: boolean
   }
 }
 
@@ -699,8 +700,8 @@ export default function Player({ song }: Props) {
             >+</button>
           </div>
 
-          {/* Export */}
-          <div className="px-4 py-3 shrink-0 flex flex-col gap-2">
+          {/* Export — always shown for Voctave, opt-in for other voicings */}
+          {(isVoctave || song.allow_export) && <div className="px-4 py-3 shrink-0 flex flex-col gap-2">
             <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Export Mix</p>
 
             {/* Mode toggle */}
@@ -751,7 +752,7 @@ export default function Player({ song }: Props) {
                 {liveRecording ? "Stop & Save WAV" : "Record Live"}
               </button>
             )}
-          </div>
+          </div>}
         </div>
 
         {/* ── PDF viewer ────────────────────────────────────────────────────────── */}

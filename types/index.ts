@@ -63,6 +63,7 @@ export interface Song {
   beatMap?: BeatMapEntry[]
   timeSigMap: TimeSigChange[]
   tempo?: number        // BPM (for display; beat map is authoritative)
+  allow_export?: boolean
   price: number         // cents
   published: boolean
   createdAt: string
