@@ -549,7 +549,7 @@ export default function Player({ song }: Props) {
     <div className="flex flex-col h-[calc(100vh-56px)]">
       {/* lamejs for client-side MP3 encoding */}
       <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js" async />
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative">
 
         {/* ── Left control panel ─────────────────────────────────────────────── */}
         <div className="w-64 border-r-2 border-slate-300 bg-slate-200 flex flex-col shrink-0">
@@ -718,7 +718,7 @@ export default function Player({ song }: Props) {
 
         {/* ── PDF viewer ────────────────────────────────────────────────────────── */}
         <div
-          className="flex-1 overflow-hidden relative min-h-0"
+          className="flex-1 overflow-hidden min-h-0"
           style={{
             background: `#f4f4f5`,
           }}
@@ -733,49 +733,51 @@ export default function Player({ song }: Props) {
             seekMeasure={seekMeasure}
             autoScroll={autoScroll}
           />
+        </div>
 
-          {/* Floating transport bar — bottom center, overlaps sheet music */}
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-3 z-20 flex items-center gap-2 px-4 py-2 rounded-2xl shadow-lg" style={{ width: "480px" }}
-            style={{
-              background: "rgba(255,255,255,0.72)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(0,0,0,0.10)",
-            }}
+        {/* Floating transport bar — bottom center of the PDF area, overlaps sheet music */}
+        <div
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-3 z-20 flex items-center gap-2 px-4 py-2 rounded-2xl shadow-lg"
+          style={{
+            width: "480px",
+            background: "rgba(255,255,255,0.72)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(0,0,0,0.10)",
+          }}
+        >
+          {/* Play */}
+          <button
+            onClick={() => { if (!playing) startPlayback(offsetRef.current) }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
+            style={playing
+              ? { background: voicingBaseColor, borderColor: voicingBaseColor, color: "#000" }
+              : { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }
+            }
           >
-            {/* Play */}
-            <button
-              onClick={() => { if (!playing) startPlayback(offsetRef.current) }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
-              style={playing
-                ? { background: voicingBaseColor, borderColor: voicingBaseColor, color: "#000" }
-                : { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }
-              }
-            >
-              <Play size={13} style={{ fill: "currentColor" }} />
-              Play
-            </button>
-            {/* Pause */}
-            <button
-              onClick={() => { if (playing) pause(); else if (currentTime > 0) startPlayback(offsetRef.current) }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
-              style={!playing && currentTime > 0
-                ? { background: "#f59e0b22", borderColor: "#f59e0b", color: "#f59e0b" }
-                : { background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }
-              }
-            >
-              <Pause size={13} style={{ fill: "currentColor" }} />
-              Pause
-            </button>
-            {/* Stop */}
-            <button
-              onClick={stop}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
-              style={{ background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }}
-            >
-              <span className="w-2.5 h-2.5 rounded-sm bg-current" />
-              Stop
-            </button>
-          </div>
+            <Play size={13} style={{ fill: "currentColor" }} />
+            Play
+          </button>
+          {/* Pause */}
+          <button
+            onClick={() => { if (playing) pause(); else if (currentTime > 0) startPlayback(offsetRef.current) }}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
+            style={!playing && currentTime > 0
+              ? { background: "#f59e0b22", borderColor: "#f59e0b", color: "#f59e0b" }
+              : { background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }
+            }
+          >
+            <Pause size={13} style={{ fill: "currentColor" }} />
+            Pause
+          </button>
+          {/* Stop */}
+          <button
+            onClick={stop}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold tracking-wide border-2 transition-all"
+            style={{ background: "transparent", borderColor: "#d4d4d8", color: "#71717a" }}
+          >
+            <span className="w-2.5 h-2.5 rounded-sm bg-current" />
+            Stop
+          </button>
         </div>
 
         {/* ── Mixer (right panel) ───────────────────────────────────────────────── */}
