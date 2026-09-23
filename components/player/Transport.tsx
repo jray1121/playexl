@@ -22,12 +22,12 @@ function formatTime(seconds: number) {
 
 export default function Transport({ currentTime, duration, onSeek }: Props) {
   return (
-    <div className="border-t border-[#8897ad] bg-[#bdc8d7] shrink-0 px-4 py-2 flex items-center gap-3">
+    <div className="border-t border-[#afbccc] bg-[#d6dee8] shrink-0 px-4 py-2 flex items-center gap-3">
       <span className="text-xs text-zinc-600 tabular-nums w-9 text-right shrink-0">
         {formatTime(currentTime)}
       </span>
       <div className="relative flex-1 h-5 flex items-center">
-        <div className="absolute inset-x-0 h-1 rounded-full bg-[#bdc8d7]" />
+        <div className="absolute inset-x-0 h-1 rounded-full bg-[#d6dee8]" />
         <div
           className="absolute h-1 rounded-full bg-brand left-0"
           style={{ width: duration ? `${(currentTime / duration) * 100}%` : "0%" }}

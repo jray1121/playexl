@@ -538,7 +538,7 @@ export default function Player({ song }: Props) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] gap-4">
         <p className="text-zinc-600 text-sm">Loading audio… {loadProgress}%</p>
-        <div className="w-64 h-1.5 bg-[#bdc8d7] rounded-full overflow-hidden">
+        <div className="w-64 h-1.5 bg-[#d6dee8] rounded-full overflow-hidden">
           <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${loadProgress}%` }} />
         </div>
       </div>
@@ -552,7 +552,7 @@ export default function Player({ song }: Props) {
       <div className="flex flex-1 min-h-0 relative">
 
         {/* ── Left control panel ─────────────────────────────────────────────── */}
-        <div className="w-64 border-r-2 border-[#8897ad] bg-[#bdc8d7] flex flex-col shrink-0">
+        <div className="w-64 border-r-2 border-[#afbccc] bg-[#d6dee8] flex flex-col shrink-0">
 
           {/* Song title + voicing + credits */}
           <div className="px-4 pt-4 pb-3 border-b border-slate-200 shrink-0">
@@ -609,7 +609,7 @@ export default function Player({ song }: Props) {
                   }
                 }}
                 placeholder="1"
-                className="w-14 bg-white border border-[#8897ad] rounded-lg px-2 py-1 text-sm text-zinc-800 focus:outline-none focus:border-brand tabular-nums text-center"
+                className="w-14 bg-white border border-[#afbccc] rounded-lg px-2 py-1 text-sm text-zinc-800 focus:outline-none focus:border-brand tabular-nums text-center"
               />
               <button
                 onClick={() => { const m = parseInt(measureInput); if (!isNaN(m) && m > 0) jumpToMeasure(m) }}
@@ -654,7 +654,7 @@ export default function Player({ song }: Props) {
             <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Export Mix</p>
 
             {/* Mode toggle */}
-            <div className="flex rounded-lg overflow-hidden border border-[#8897ad]">
+            <div className="flex rounded-lg overflow-hidden border border-[#afbccc]">
               <button
                 onClick={() => setExportMode("instant")}
                 className="flex-1 py-1.5 text-[11px] font-bold transition-colors"
@@ -709,12 +709,12 @@ export default function Player({ song }: Props) {
               <span className="text-[11px] text-zinc-500 shrink-0">Zoom</span>
               <button
                 onClick={() => setZoom((z) => Math.max(0.5, Math.round((z - 0.1) * 10) / 10))}
-                className="w-6 h-6 rounded bg-[#bdc8d7] hover:bg-[#bdc8d7] text-zinc-700 flex items-center justify-center text-lg leading-none transition-colors"
+                className="w-6 h-6 rounded bg-[#d6dee8] hover:bg-[#d6dee8] text-zinc-700 flex items-center justify-center text-lg leading-none transition-colors"
               >−</button>
               <span className="text-xs text-zinc-600 w-9 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
               <button
                 onClick={() => setZoom((z) => Math.min(2.0, Math.round((z + 0.1) * 10) / 10))}
-                className="w-6 h-6 rounded bg-[#bdc8d7] hover:bg-[#bdc8d7] text-zinc-700 flex items-center justify-center text-lg leading-none transition-colors"
+                className="w-6 h-6 rounded bg-[#d6dee8] hover:bg-[#d6dee8] text-zinc-700 flex items-center justify-center text-lg leading-none transition-colors"
               >+</button>
             </div>
           </div>
@@ -785,14 +785,14 @@ export default function Player({ song }: Props) {
         </div>
 
         {/* ── Mixer (right panel) ───────────────────────────────────────────────── */}
-        <div className="w-64 border-l-2 border-[#8897ad] bg-[#bdc8d7] overflow-hidden flex flex-col shrink-0">
+        <div className="w-64 border-l-2 border-[#afbccc] bg-[#d6dee8] overflow-hidden flex flex-col shrink-0">
           {/* Mixer header */}
           <div className="pl-4 pr-5 pt-2.5 pb-2 border-b border-slate-200 shrink-0">
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Mixer</p>
               <button
                 onClick={resetMixer}
-                className="text-[10px] font-semibold text-zinc-500 hover:text-zinc-800 bg-[#bdc8d7] hover:bg-[#bdc8d7] px-2 py-0.5 rounded transition-colors"
+                className="text-[10px] font-semibold text-zinc-500 hover:text-zinc-800 bg-[#d6dee8] hover:bg-[#d6dee8] px-2 py-0.5 rounded transition-colors"
               >Reset</button>
             </div>
           </div>
@@ -801,7 +801,7 @@ export default function Player({ song }: Props) {
           {trackUIs.filter((t) => t.part.name === "full_mix").map((track) => {
             const i = trackUIs.findIndex((t) => t.part.name === "full_mix")
             return (
-              <div key="full_mix" className="shrink-0 h-16 border-b border-[#8897ad]">
+              <div key="full_mix" className="shrink-0 h-16 border-b border-[#afbccc]">
                 <ChannelStrip track={track} index={0} baseColor={voicingBaseColor}
                   onVolumeChange={(v) => setVolume(i, v)} onSoloToggle={() => {}} hideSolo />
               </div>
