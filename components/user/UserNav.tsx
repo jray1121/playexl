@@ -51,12 +51,13 @@ export default function UserNav() {
     <nav className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-50">
       <div className="h-0.5 w-full bg-gradient-to-r from-brand via-brand-light to-brand opacity-80" />
       <div className="w-full px-6 flex items-center justify-between h-14">
+        <div className="flex items-center gap-6">
         <Link href="/" className="flex items-center gap-2 font-bold text-brand text-lg tracking-wide">
           <Music size={20} />
           MusicEXL
         </Link>
 
-        {/* Nav links — teacher sees Library + Classes + Dashboard; student sees Dashboard only */}
+        {/* Nav links — teacher sees Dashboard + Library + Classes; student sees Dashboard only */}
         <div className="flex gap-1">
           {user && (
             <>
@@ -93,6 +94,7 @@ export default function UserNav() {
               Dashboard
             </Link>
           )}
+        </div>
         </div>
 
         <div className="flex items-center gap-4">
