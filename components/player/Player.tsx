@@ -569,9 +569,73 @@ export default function Player({ song }: Props) {
             ))}
           </div>
 
-          {/* Click toggle — stays near top for Voctave */}
+          {/* Spacer — pushes bottom controls down */}
+          <div className="flex-1" />
+
+          {/* Bar : Beat */}
+          {beatMap.length > 0 && (
+            <div className="px-4 pb-2 shrink-0">
+              <div className="flex items-stretch gap-0 bg-white border border-slate-200 rounded-lg overflow-hidden w-full">
+                <div className="flex-1 flex flex-col items-center justify-center py-2">
+                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Bar</p>
+                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
+                    {currentBeat ? String(currentBeat.measure).padStart(2, "0") : "—"}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center px-1 text-2xl font-black text-zinc-400">:</div>
+                <div className="flex-1 flex flex-col items-center justify-center py-2">
+                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Beat</p>
+                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
+                    {currentBeat ? currentBeat.beat : "—"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Go to bar */}
+          {beatMap.length > 0 && (
+            <div className="px-4 pb-2 shrink-0 flex items-center gap-2">
+              <span className="text-xs text-zinc-500 shrink-0">Go to bar</span>
+              <input
+                type="number"
+                min={1}
+                value={measureInput}
+                onChange={(e) => setMeasureInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const m = parseInt(measureInput)
+                    if (!isNaN(m) && m > 0) jumpToMeasure(m)
+                  }
+                }}
+                placeholder="1"
+                className="w-14 bg-white border border-slate-300 rounded-lg px-2 py-1 text-sm text-zinc-800 focus:outline-none focus:border-brand tabular-nums text-center"
+              />
+              <button
+                onClick={() => { const m = parseInt(measureInput); if (!isNaN(m) && m > 0) jumpToMeasure(m) }}
+                className="flex-1 py-1 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+                style={{ background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }}
+              >Go</button>
+            </div>
+          )}
+
+          {/* Auto-scroll */}
+          <div className="px-4 pb-2 shrink-0">
+            <button
+              onClick={() => setAutoScroll((v) => !v)}
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
+              style={autoScroll
+                ? { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor, boxShadow: `0 0 8px ${voicingBaseColor}40` }
+                : { background: "transparent", borderColor: "#3f3f46", color: "#71717a" }}
+            >
+              <span className="w-2 h-2 rounded-full" style={{ background: autoScroll ? voicingBaseColor : "#52525b" }} />
+              Auto-scroll {autoScroll ? "On" : "Off"}
+            </button>
+          </div>
+
+          {/* Click toggle */}
           {isVoctave && (
-            <div className="px-4 pt-3 shrink-0">
+            <div className="px-4 pb-2 shrink-0">
               <button
                 onClick={() => setClickOn((v) => !v)}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
@@ -584,9 +648,6 @@ export default function Player({ song }: Props) {
               </button>
             </div>
           )}
-
-          {/* Spacer — pushes bottom controls down */}
-          <div className="flex-1" />
 
           {/* Export — always shown for Voctave, opt-in for other voicings */}
           {(isVoctave || song.allow_export) && <div className="px-4 py-3 border-t border-slate-200 shrink-0 flex flex-col gap-2">
@@ -642,65 +703,8 @@ export default function Player({ song }: Props) {
             )}
           </div>}
 
-          {/* Bar : Beat */}
-          {beatMap.length > 0 && (
-            <div className="px-4 pb-2 shrink-0">
-              <div className="flex items-stretch gap-0 bg-white border border-slate-200 rounded-lg overflow-hidden w-full">
-                <div className="flex-1 flex flex-col items-center justify-center py-2">
-                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Bar</p>
-                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
-                    {currentBeat ? String(currentBeat.measure).padStart(2, "0") : "—"}
-                  </p>
-                </div>
-                <div className="flex items-center justify-center px-1 text-2xl font-black text-zinc-400">:</div>
-                <div className="flex-1 flex flex-col items-center justify-center py-2">
-                  <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1">Beat</p>
-                  <p className="text-3xl font-black tabular-nums leading-none" style={{ color: voicingBaseColor, textShadow: `0 0 14px ${voicingBaseColor}99` }}>
-                    {currentBeat ? currentBeat.beat : "—"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Go to bar */}
-          {beatMap.length > 0 && (
-            <div className="px-4 pb-2 shrink-0 flex items-center gap-2">
-              <span className="text-xs text-zinc-500 shrink-0">Go to bar</span>
-              <input
-                type="number"
-                min={1}
-                value={measureInput}
-                onChange={(e) => setMeasureInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const m = parseInt(measureInput)
-                    if (!isNaN(m) && m > 0) jumpToMeasure(m)
-                  }
-                }}
-                placeholder="1"
-                className="w-14 bg-white border border-slate-300 rounded-lg px-2 py-1 text-sm text-zinc-800 focus:outline-none focus:border-brand tabular-nums text-center"
-              />
-              <button
-                onClick={() => { const m = parseInt(measureInput); if (!isNaN(m) && m > 0) jumpToMeasure(m) }}
-                className="flex-1 py-1 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
-                style={{ background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor }}
-              >Go</button>
-            </div>
-          )}
-
-          {/* Auto-scroll + Zoom — pinned to bottom */}
-          <div className="px-4 pb-3 shrink-0 flex flex-col gap-2">
-            <button
-              onClick={() => setAutoScroll((v) => !v)}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold tracking-wide border-2 transition-all"
-              style={autoScroll
-                ? { background: `${voicingBaseColor}22`, borderColor: voicingBaseColor, color: voicingBaseColor, boxShadow: `0 0 8px ${voicingBaseColor}40` }
-                : { background: "transparent", borderColor: "#3f3f46", color: "#71717a" }}
-            >
-              <span className="w-2 h-2 rounded-full" style={{ background: autoScroll ? voicingBaseColor : "#52525b" }} />
-              Auto-scroll {autoScroll ? "On" : "Off"}
-            </button>
+          {/* Zoom — pinned to very bottom */}
+          <div className="px-4 pb-3 shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-[11px] text-zinc-500 shrink-0">Zoom</span>
               <button
