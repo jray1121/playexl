@@ -1,9 +1,10 @@
 "use client"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { Music, LogOut } from "lucide-react"
+import { useRouter, usePathname } from "next/navigation"
+import { Music, LogOut, Library, Users, LayoutDashboard } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
 import type { User } from "@supabase/supabase-js"
 
 function getStudentLabel(): string | null {
@@ -16,6 +17,7 @@ export default function UserNav() {
   const [user, setUser] = useState<User | null>(null)
   const [studentLabel, setStudentLabel] = useState<string | null>(null)
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     const label = getStudentLabel()
@@ -53,6 +55,46 @@ export default function UserNav() {
           <Music size={20} />
           MusicEXL
         </Link>
+
+        {/* Nav links — teacher sees Library + Classes + Dashboard; student sees Dashboard only */}
+        <div className="flex gap-1">
+          {user && (
+            <>
+              {[
+                { href: "/", label: "Library", icon: Library },
+                { href: "/teacher/classes", label: "Classes", icon: Users },
+                { href: "/teacher", label: "Dashboard", icon: LayoutDashboard },
+              ].map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                    pathname === href || (href !== "/" && href !== "/teacher" && pathname.startsWith(href))
+                      ? "bg-brand/10 text-brand"
+                      : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+                  )}
+                >
+                  <Icon size={15} />
+                  {label}
+                </Link>
+              ))}
+            </>
+          )}
+          {studentLabel !== null && (
+            <Link
+              href="/"
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded text-sm font-medium transition-colors",
+                pathname === "/" ? "bg-brand/10 text-brand" : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800"
+              )}
+            >
+              <LayoutDashboard size={15} />
+              Dashboard
+            </Link>
+          )}
+        </div>
+
         <div className="flex items-center gap-4">
           {user ? (
             <>
