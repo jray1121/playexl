@@ -29,7 +29,7 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
 
   return (
     <div
-      className="relative h-full pl-4 pr-5 py-2 flex flex-col gap-1.5 justify-center border-b border-slate-300 transition-all duration-200 bg-white"
+      className="relative h-full pl-4 pr-5 py-2 flex flex-col gap-1.5 justify-center border-b border-slate-400 transition-all duration-200 bg-white"
       style={soloed ? { background: `${baseColor}18`, boxShadow: `inset 0 0 0 1.5px ${baseColor}60` } : {}}
     >
 
@@ -77,7 +77,7 @@ export default function ChannelStrip({ track, index, baseColor, onVolumeChange, 
       <div className="flex items-center gap-2.5">
         <div className="relative flex-1 h-5 flex items-center">
           {/* Groove */}
-          <div className="absolute inset-x-0 h-1 rounded-full bg-slate-300" />
+          <div className="absolute inset-x-0 h-1 rounded-full bg-slate-400" />
           {/* Fill */}
           <div
             className="absolute h-1 rounded-full left-0 transition-none"
