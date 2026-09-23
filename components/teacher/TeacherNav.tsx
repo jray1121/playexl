@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 
 const links = [
+  { href: "/teacher", label: "Dashboard", icon: LayoutDashboard },
   { href: "/", label: "Library", icon: Library },
   { href: "/teacher/classes", label: "Classes", icon: Users },
-  { href: "/teacher", label: "Dashboard", icon: LayoutDashboard },
 ]
 
 export default function TeacherNav() {

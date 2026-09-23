@@ -1,14 +1,14 @@
 "use client"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Music, LayoutDashboard, LogOut, Users } from "lucide-react"
+import { Library, LayoutDashboard, LogOut, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/songs", label: "Library", icon: Music },
+  { href: "/admin/songs", label: "Library", icon: Library },
   { href: "/admin/teachers", label: "Teachers", icon: Users },
 ]
 

@@ -61,9 +61,9 @@ export default function UserNav() {
           {user && (
             <>
               {[
+                { href: "/teacher", label: "Dashboard", icon: LayoutDashboard },
                 { href: "/", label: "Library", icon: Library },
                 { href: "/teacher/classes", label: "Classes", icon: Users },
-                { href: "/teacher", label: "Dashboard", icon: LayoutDashboard },
               ].map(({ href, label, icon: Icon }) => (
                 <Link
                   key={href}
